@@ -295,6 +295,49 @@ BEGIN
 END //
 DELIMITER ;
 
+-- ------------------------------------------------------------
+-- DE EDU
+DELIMITER //
+CREATE PROCEDURE spu_eliminar_paciente_completo(
+    IN p_idpaciente INT
+)
+BEGIN
+    DECLARE v_idpersona INT;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SELECT 0 AS resultado, 'Error al eliminar el paciente' AS mensaje;
+    END;
+    
+    -- Obtener el idpersona del paciente
+    SELECT idpersona INTO v_idpersona 
+    FROM pacientes 
+    WHERE idpaciente = p_idpaciente;
+    
+    -- Verificar que el paciente existe
+    IF v_idpersona IS NULL THEN
+        SELECT 0 AS resultado, 'El paciente no existe' AS mensaje;
+    ELSE
+        -- Iniciar transacción
+        START TRANSACTION;
+        
+        -- Eliminar todas las alergias asociadas al paciente primero
+        DELETE FROM listaalergias WHERE idpersona = v_idpersona;
+        
+        -- Eliminar el paciente
+        DELETE FROM pacientes WHERE idpaciente = p_idpaciente;
+        
+        -- Eliminar la persona
+        DELETE FROM personas WHERE idpersona = v_idpersona;
+        
+        -- Confirmar la transacción
+        COMMIT;
+        
+        SELECT 1 AS resultado, 'Paciente eliminado correctamente con todos sus registros asociados' AS mensaje;
+    END IF;
+END //
+DELIMITER ;
+
 -- SELECT para ver las alergias de un paciente por su número de documento
 SELECT 
     p.idpersona,

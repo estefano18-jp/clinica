@@ -16,23 +16,22 @@ $stmtCitasHoy->bindParam(':fecha', $fechaHoy);
 $stmtCitasHoy->execute();
 $totalCitasHoy = $stmtCitasHoy->fetch(PDO::FETCH_ASSOC)['total'];
 
-// Total de pacientes registrados (personas que han tenido consultas)
-$queryTotalPacientes = "SELECT COUNT(DISTINCT idpaciente) as total FROM consultas";
+// Total de pacientes registrados - CORREGIDO: ahora cuenta todos los pacientes en la tabla pacientes
+$queryTotalPacientes = "SELECT COUNT(*) as total FROM pacientes";
 $stmtTotalPacientes = $pdo->prepare($queryTotalPacientes);
 $stmtTotalPacientes->execute();
 $totalPacientes = $stmtTotalPacientes->fetch(PDO::FETCH_ASSOC)['total'];
 
-// Total de consultas realizadas en el mes actual
-$inicioMes = date('Y-m-01');
-$finMes = date('Y-m-t');
-$queryConsultasMes = "SELECT COUNT(*) as total FROM consultas WHERE fecha BETWEEN :inicio AND :fin";
-$stmtConsultasMes = $pdo->prepare($queryConsultasMes);
-$stmtConsultasMes->bindParam(':inicio', $inicioMes);
-$stmtConsultasMes->bindParam(':fin', $finMes);
-$stmtConsultasMes->execute();
-$totalConsultasMes = $stmtConsultasMes->fetch(PDO::FETCH_ASSOC)['total'];
+// Total de doctores registrados
+$queryTotalDoctores = "SELECT COUNT(*) as total FROM colaboradores c 
+                      INNER JOIN personas p ON c.idpersona = p.idpersona";
+$stmtTotalDoctores = $pdo->prepare($queryTotalDoctores);
+$stmtTotalDoctores->execute();
+$totalDoctores = $stmtTotalDoctores->fetch(PDO::FETCH_ASSOC)['total'];
 
 // Total de servicios realizados en el mes
+$inicioMes = date('Y-m-01');
+$finMes = date('Y-m-t');
 $queryServiciosMes = "SELECT COUNT(*) as total FROM serviciosrequeridos WHERE fechaanalisis BETWEEN :inicio AND :fin";
 $stmtServiciosMes = $pdo->prepare($queryServiciosMes);
 $stmtServiciosMes->bindParam(':inicio', $inicioMes);
@@ -41,7 +40,7 @@ $stmtServiciosMes->execute();
 $totalServiciosMes = $stmtServiciosMes->fetch(PDO::FETCH_ASSOC)['total'];
 
 // Obtener las próximas citas de hoy
-$queryCitasProximas = "SELECT c.fecha, c.hora, p.nombres, p.apellidos, c.estado
+$queryCitasProximas = "SELECT c.fecha, c.hora, p.nombres, p.apellidos, c.estado, c.idcita, c.idpersona
                       FROM citas c
                       INNER JOIN personas p ON c.idpersona = p.idpersona
                       WHERE c.fecha = :fecha AND c.estado = 'PROGRAMADA'
@@ -162,7 +161,7 @@ $totalesEvolucionJSON = json_encode(array_values($totalesEvolucion));
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="<?= $host ?>/views/personas/listado.php">Ver Detalles</a>
+                    <a class="small text-white stretched-link" href="<?= $host ?>/views/personas/listado.php?tipo=pacientes">Ver Detalles</a>
                     <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
@@ -172,14 +171,14 @@ $totalesEvolucionJSON = json_encode(array_values($totalesEvolucion));
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h3 class="display-4 fw-bold"><?= $totalConsultasMes ?></h3>
-                            <div>Consultas este Mes</div>
+                            <h3 class="display-4 fw-bold"><?= $totalDoctores ?></h3>
+                            <div>Doctores Registrados</div>
                         </div>
-                        <i class="fas fa-stethoscope fa-3x"></i>
+                        <i class="fas fa-user-md fa-3x"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="<?= $host ?>/views/consultas/listado.php">Ver Detalles</a>
+                    <a class="small text-white stretched-link" href="<?= $host ?>/views/personas/listado.php?tipo=doctores">Ver Detalles</a>
                     <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
@@ -203,116 +202,212 @@ $totalesEvolucionJSON = json_encode(array_values($totalesEvolucion));
         </div>
     </div>
     
-    <!-- Gráficos y Tablas -->
-    <div class="row">
-        <!-- Gráfico de Consultas por Especialidad -->
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-chart-bar me-1"></i>
-                    Consultas por Especialidad (Mes Actual)
-                </div>
-                <div class="card-body">
-                    <canvas id="consultasPorEspecialidad" width="100%" height="40"></canvas>
+    <!-- Gráficos y Tablas - Sección Mejorada -->
+<div class="row">
+    <!-- Gráfico de Consultas por Especialidad -->
+    <div class="col-xl-6">
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-gradient-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-chart-bar me-1"></i> Consultas por Especialidad (Mes Actual)</span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light" type="button" id="dropdownEspecialidadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownEspecialidadBtn">
+                            <li><a class="dropdown-item" href="#" id="downloadEspPDF"><i class="fas fa-file-pdf me-2"></i>Exportar PDF</a></li>
+                            <li><a class="dropdown-item" href="#" id="refreshEspChart"><i class="fas fa-sync-alt me-2"></i>Actualizar</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Gráfico de Evolución de Consultas -->
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-chart-line me-1"></i>
-                    Evolución de Consultas (Últimos 7 días)
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height:300px;">
+                    <canvas id="consultasPorEspecialidad"></canvas>
                 </div>
-                <div class="card-body">
-                    <canvas id="evolucionConsultas" width="100%" height="40"></canvas>
+                <?php if (count($consultasPorEspecialidad) == 0): ?>
+                <div class="text-center mt-4 text-muted">
+                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                    <p>No hay datos disponibles para el mes actual</p>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráfico de Evolución de Consultas -->
+    <div class="col-xl-6">
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-gradient-info text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-chart-line me-1"></i> Evolución de Consultas (Últimos 7 días)</span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light" type="button" id="dropdownEvolucionBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownEvolucionBtn">
+                            <li><a class="dropdown-item" href="#" id="downloadEvoPDF"><i class="fas fa-file-pdf me-2"></i>Exportar PDF</a></li>
+                            <li><a class="dropdown-item" href="#" id="refreshEvoChart"><i class="fas fa-sync-alt me-2"></i>Actualizar</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height:300px;">
+                    <canvas id="evolucionConsultas"></canvas>
+                </div>
+                <?php if (count($evolucionConsultas) == 0): ?>
+                <div class="text-center mt-4 text-muted">
+                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                    <p>No hay datos disponibles para los últimos 7 días</p>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Tabla de Citas para Hoy -->
+    <div class="col-xl-6">
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-gradient-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-calendar-day me-1"></i> Próximas Citas para Hoy (<?= date('d/m/Y') ?>)</span>
+                    <a href="<?= $host ?>/views/citas/nueva.php" class="btn btn-sm btn-light">
+                        <i class="fas fa-plus"></i> Nueva Cita
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <?php if (count($citasProximas) > 0): ?>
+                <div class="table-responsive">
+                    <table class="table table-hover border-top-0">
+                        <thead>
+                            <tr>
+                                <th class="text-nowrap"><i class="far fa-clock me-2"></i>Hora</th>
+                                <th><i class="fas fa-user me-2"></i>Paciente</th>
+                                <th><i class="fas fa-tag me-2"></i>Estado</th>
+                                <th class="text-center"><i class="fas fa-cog me-2"></i>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($citasProximas as $cita): ?>
+                                <tr>
+                                    <td class="fw-bold"><?= date('H:i', strtotime($cita['hora'])) ?></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm me-2 bg-primary rounded-circle text-white">
+                                                <?= strtoupper(substr($cita['nombres'], 0, 1)) ?>
+                                            </div>
+                                            <div><?= $cita['nombres'] . ' ' . $cita['apellidos'] ?></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary rounded-pill">
+                                            <i class="fas fa-calendar-check me-1"></i> <?= $cita['estado'] ?>
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group">
+                                            <a href="<?= $host ?>/views/consultas/registro.php?idcita=<?= $cita['idcita'] ?>&idpersona=<?= $cita['idpersona'] ?>" class="btn btn-sm btn-success" data-bs-toggle="tooltip" title="Atender">
+                                                <i class="fas fa-notes-medical"></i>
+                                            </a>
+                                            <a href="<?= $host ?>/views/citas/editar.php?id=<?= $cita['idcita'] ?>" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-danger cancelar-cita" data-id="<?= $cita['idcita'] ?>" data-bs-toggle="tooltip" title="Cancelar">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php else: ?>
+                <div class="text-center py-5">
+                    <img src="<?= $host ?>/assets/img/no-appointments.svg" alt="No hay citas" class="img-fluid mb-3" style="max-height: 150px;">
+                    <h5 class="text-muted">No hay citas programadas para hoy</h5>
+                    <p class="text-muted">Puedes programar una nueva cita haciendo clic en el botón superior</p>
+                    <a href="<?= $host ?>/views/citas/nueva.php" class="btn btn-primary mt-3">
+                        <i class="fas fa-plus-circle me-2"></i>Programar Nueva Cita
+                    </a>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Mostrando las próximas 5 citas</small>
+                    <a href="<?= $host ?>/views/citas/listado.php" class="btn btn-sm btn-outline-primary">Ver todas</a>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="row">
-        <!-- Tabla de Citas para Hoy -->
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-calendar-day me-1"></i>
-                    Próximas Citas para Hoy
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-primary">
-                                <tr>
-                                    <th>Hora</th>
-                                    <th>Paciente</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (count($citasProximas) > 0): ?>
-                                    <?php foreach ($citasProximas as $cita): ?>
-                                        <tr>
-                                            <td><?= date('H:i', strtotime($cita['hora'])) ?></td>
-                                            <td><?= $cita['nombres'] . ' ' . $cita['apellidos'] ?></td>
-                                            <td>
-                                                <span class="badge bg-primary"><?= $cita['estado'] ?></span>
-                                            </td>
-                                            <td>
-                                                <a href="<?= $host ?>/views/consultas/registro.php?fecha=<?= $cita['fecha'] ?>&paciente=<?= $cita['nombres'] . ' ' . $cita['apellidos'] ?>" class="btn btn-sm btn-success">
-                                                    <i class="fas fa-notes-medical"></i> Atender
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-center">No hay citas programadas para hoy</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+    <!-- Tabla de Últimos Diagnósticos -->
+    <div class="col-xl-6">
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-gradient-warning text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-clipboard-list me-1"></i> Últimos Diagnósticos</span>
+                    <a href="<?= $host ?>/views/consultas/historial.php" class="btn btn-sm btn-light">
+                        <i class="fas fa-history"></i> Historial
+                    </a>
                 </div>
             </div>
-        </div>
-        
-        <!-- Tabla de Últimos Diagnósticos -->
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-clipboard-list me-1"></i>
-                    Últimos Diagnósticos
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-primary">
+            <div class="card-body">
+                <?php if (count($ultimosDiagnosticos) > 0): ?>
+                <div class="table-responsive">
+                    <table class="table table-hover border-top-0">
+                        <thead>
+                            <tr>
+                                <th class="text-nowrap"><i class="far fa-calendar-alt me-2"></i>Fecha</th>
+                                <th><i class="fas fa-user me-2"></i>Paciente</th>
+                                <th><i class="fas fa-stethoscope me-2"></i>Diagnóstico</th>
+                                <th class="text-center"><i class="fas fa-file-medical me-2"></i>Detalles</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($ultimosDiagnosticos as $diagnostico): ?>
                                 <tr>
-                                    <th>Fecha</th>
-                                    <th>Paciente</th>
-                                    <th>Diagnóstico</th>
+                                    <td class="text-nowrap fw-bold"><?= date('d/m/Y', strtotime($diagnostico['fecha'])) ?></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm me-2 bg-warning rounded-circle text-white">
+                                                <?= strtoupper(substr($diagnostico['nombres'], 0, 1)) ?>
+                                            </div>
+                                            <div><?= $diagnostico['nombres'] . ' ' . $diagnostico['apellidos'] ?></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-truncate d-inline-block" style="max-width: 200px;" data-bs-toggle="tooltip" title="<?= $diagnostico['diagnostico'] ?>">
+                                            <?= $diagnostico['diagnostico'] ?>
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="<?= $host ?>/views/consultas/detalle.php?id=<?= $diagnostico['idconsulta'] ?? 0 ?>" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (count($ultimosDiagnosticos) > 0): ?>
-                                    <?php foreach ($ultimosDiagnosticos as $diagnostico): ?>
-                                        <tr>
-                                            <td><?= date('d/m/Y', strtotime($diagnostico['fecha'])) ?></td>
-                                            <td><?= $diagnostico['nombres'] . ' ' . $diagnostico['apellidos'] ?></td>
-                                            <td><?= $diagnostico['diagnostico'] ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="3" class="text-center">No hay diagnósticos recientes</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php else: ?>
+                <div class="text-center py-5">
+                    <img src="<?= $host ?>/assets/img/no-diagnostics.svg" alt="No hay diagnósticos" class="img-fluid mb-3" style="max-height: 150px;">
+                    <h5 class="text-muted">No hay diagnósticos recientes</h5>
+                    <p class="text-muted">Los diagnósticos aparecerán aquí después de atender consultas</p>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Mostrando los últimos 5 diagnósticos</small>
+                    <a href="<?= $host ?>/views/consultas/historial.php" class="btn btn-sm btn-outline-primary">Ver historial completo</a>
                 </div>
             </div>
         </div>
@@ -321,61 +416,67 @@ $totalesEvolucionJSON = json_encode(array_values($totalesEvolucion));
 
 <!-- Scripts para los gráficos -->
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     // Gráfico de consultas por especialidad
     var ctxEspecialidades = document.getElementById("consultasPorEspecialidad");
-    var chartEspecialidades = new Chart(ctxEspecialidades, {
-        type: "bar",
-        data: {
-            labels: <?= $especialidadesJSON ?>,
-            datasets: [{
-                label: "Consultas",
-                backgroundColor: "rgba(54, 162, 235, 0.7)",
-                borderColor: "rgba(54, 162, 235, 1)",
-                borderWidth: 1,
-                data: <?= $totalConsultasJSON ?>
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
+    if (ctxEspecialidades) {
+        var chartEspecialidades = new Chart(ctxEspecialidades, {
+            type: "bar",
+            data: {
+                labels: <?= $especialidadesJSON ?>,
+                datasets: [{
+                    label: "Consultas",
+                    backgroundColor: "rgba(54, 162, 235, 0.7)",
+                    borderColor: "rgba(54, 162, 235, 1)",
+                    borderWidth: 1,
+                    data: <?= $totalConsultasJSON ?>
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 
     // Gráfico de evolución de consultas
     var ctxEvolucion = document.getElementById("evolucionConsultas");
-    var chartEvolucion = new Chart(ctxEvolucion, {
-        type: "line",
-        data: {
-            labels: <?= $fechasEvolucionJSON ?>,
-            datasets: [{
-                label: "Consultas",
-                backgroundColor: "rgba(75, 192, 192, 0.2)",
-                borderColor: "rgba(75, 192, 192, 1)",
-                borderWidth: 2,
-                tension: 0.3,
-                fill: true,
-                data: <?= $totalesEvolucionJSON ?>
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
+    if (ctxEvolucion) {
+        var chartEvolucion = new Chart(ctxEvolucion, {
+            type: "line",
+            data: {
+                labels: <?= $fechasEvolucionJSON ?>,
+                datasets: [{
+                    label: "Consultas",
+                    backgroundColor: "rgba(75, 192, 192, 0.2)",
+                    borderColor: "rgba(75, 192, 192, 1)",
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    data: <?= $totalesEvolucionJSON ?>
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+    }
+});
 </script>
 
 <?php
