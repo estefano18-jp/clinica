@@ -203,6 +203,9 @@ try {
     $errorMessage = "Error al obtener las imágenes: " . $e->getMessage();
     $imagenes = [];
 }
+
+// Generar un código único para prevenir el cache de imágenes
+$cacheBuster = time();
 ?>
 
 <!DOCTYPE html>
@@ -288,7 +291,7 @@ try {
                                 <div class="col-md-3 text-center">
                                     <div class="avatar-container">
                                         <?php if ($selectedImageId && isset($selectedImage)): ?>
-                                            <img id="avatarPreview" src="../../img/carrusel/<?php echo htmlspecialchars($selectedImage['imagen']); ?>" alt="Imagen de Carrusel" onerror="this.src='/api/placeholder/300/200'">
+                                            <img id="avatarPreview" src="../../img/carrusel/<?php echo htmlspecialchars($selectedImage['imagen']); ?>?v=<?php echo $cacheBuster; ?>" alt="Imagen de Carrusel" onerror="this.src='/api/placeholder/300/200'">
                                         <?php else: ?>
                                             <img id="avatarPreview" src="../../img/carrusel/placeholder.jpg" alt="Imagen de Carrusel" onerror="this.src='/api/placeholder/300/200'">
                                         <?php endif; ?>
@@ -340,7 +343,7 @@ try {
                                 <div class="col-md-4 text-center mb-4">
                                     <div class="card <?php echo ($selectedImageId == $row['id']) ? 'selected-image' : ''; ?>">
                                         <div class="card-body">
-                                            <img src="../../img/carrusel/<?php echo htmlspecialchars($row['imagen']); ?>" class="img-fluid rounded mb-2" alt="Imagen carrusel" onerror="this.src='/api/placeholder/300/200'">
+                                            <img src="../../img/carrusel/<?php echo htmlspecialchars($row['imagen']); ?>?v=<?php echo $cacheBuster; ?>" class="img-fluid rounded mb-2" alt="Imagen carrusel" onerror="this.src='/api/placeholder/300/200'">
                                             <p class="mt-2"><strong>Nombre:</strong> <?php echo htmlspecialchars($row['imagen']); ?></p>
                                             <p><strong>Descripción:</strong> <?php echo htmlspecialchars($row['descripcion']); ?></p>
                                             <a href="<?php echo $_SERVER['PHP_SELF']; ?>?id=<?php echo $row['id']; ?>" class="btn btn-warning mt-2">
@@ -375,4 +378,4 @@ try {
 </body>
 </html>
 
-<?php require_once '../include/footer.php'; ?>  
+<?php require_once '../include/footer.php'; ?>
