@@ -250,7 +250,7 @@ header('Content-Type: text/html; charset=utf-8');
                 <tbody>
                     <?php foreach ($alergias as $alergia): ?>
                         <tr>
-                            <td><?= htmlspecialchars($alergia['tipoalergia']) ?></td>
+                            <td><?= ucfirst(strtolower(htmlspecialchars($alergia['tipoalergia']))) ?></td>
                             <td><?= htmlspecialchars($alergia['alergia']) ?></td>
                             <td>
                                 <span class="badge badge-<?= strtolower($alergia['gravedad']) ?>">

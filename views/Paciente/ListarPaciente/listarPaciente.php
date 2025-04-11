@@ -1691,4 +1691,3 @@ require_once '../../include/header.administrador.php';
 
 </html>
 
-<?php require_once '../../include/footer.php'; ?>
