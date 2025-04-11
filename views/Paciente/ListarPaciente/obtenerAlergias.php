@@ -52,7 +52,7 @@ $alergias = $paciente->obtenerAlergiasPorId($idPaciente);
                 <tbody>
                     <?php foreach ($alergias as $alergia): ?>
                         <tr>
-                            <td><?= htmlspecialchars($alergia['tipoalergia']) ?></td>
+                            <td><?= ucfirst(strtolower(htmlspecialchars($alergia['tipoalergia']))) ?></td>
                             <td><?= htmlspecialchars($alergia['alergia']) ?></td>
                             <td class="text-center">
                                 <span class="badge bg-<?= ($alergia['gravedad'] == 'LEVE') ? 'success' : (($alergia['gravedad'] == 'MODERADA') ? 'warning' : 'danger') ?>">
