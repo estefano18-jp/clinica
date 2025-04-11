@@ -90,7 +90,8 @@
     </div>
     <div class="carousel-inner">
       <div class="carousel-item active">
-        <img src="img/carrusel/imagenCarousel01.jpg" class="d-block w-100" alt="Servicios médicos de calidad">
+        <img src="img/carrusel/imagenCarousel01.jpg" class="d-block w-100 carousel-image" 
+             data-src="img/carrusel/imagenCarousel01.jpg" alt="Servicios médicos de calidad">
         <div class="carousel-caption">
           <h3 class="animate__animated animate__fadeInDown">Atención médica de primera calidad</h3>
           <p class="animate__animated animate__fadeInUp">Nuestros especialistas están comprometidos con su bienestar y
@@ -99,7 +100,8 @@
         </div>
       </div>
       <div class="carousel-item">
-        <img src="img/carrusel/imagenCarousel02.jpg" class="d-block w-100" alt="Tecnología médica avanzada">
+        <img src="img/carrusel/imagenCarousel02.jpg" class="d-block w-100 carousel-image" 
+             data-src="img/carrusel/imagenCarousel02.jpg" alt="Tecnología médica avanzada">
         <div class="carousel-caption">
           <h3 class="animate__animated animate__fadeInDown">Tecnología médica de vanguardia</h3>
           <p class="animate__animated animate__fadeInUp">Equipamiento moderno para diagnósticos precisos y tratamientos
@@ -107,9 +109,10 @@
           <a href="#tecnologia" class="btn btn-primary animate__animated animate__fadeInUp">Conoce nuestra
             tecnología</a>
         </div>
-      </div>
+      </div>  
       <div class="carousel-item">
-        <img src="img/carrusel/imagenCarousel03.jpg" class="d-block w-100" alt="Equipo médico profesional">
+        <img src="img/carrusel/imagenCarousel03.jpg" class="d-block w-100 carousel-image" 
+             data-src="img/carrusel/imagenCarousel03.jpg" alt="Equipo médico profesional">
         <div class="carousel-caption">
           <h3 class="animate__animated animate__fadeInDown">Profesionales altamente cualificados</h3>
           <p class="animate__animated animate__fadeInUp">Nuestro equipo médico cuenta con amplia experiencia y formación
@@ -340,23 +343,7 @@
       </div>
     </div>
 
-    <!-- Mapa de ubicación -->
-    <div class="container mt-4 mb-4">
-      <div class="row">
-        <div class="col-12">
-          <div class="map-responsive">
-            <!-- Aquí puede insertar un iframe con Google Maps o una imagen de mapa -->
-            <iframe src="EgZjaHJvbWUqBwgAEAAYgAQyBwgAEAAYgAQyBggBEEUYOTIHCAIQABiABDIHCAMQABiABDIHCAQQABiABDIHCAUQABiABDIHCAYQABiABDIHCAcQABiABDIHCAgQABiABDIHCAkQABiABNIBCDIxNDNqMGoxqAIAsAIA" width="100%" height="400" style="border:0;" allowfullscreen=""
-              loading="lazy" referrerpolicy="no-referrer-when-downgrade">
-            </iframe>
-            <div class="bg-secondary p-4 text-center">
-              <i class="fas fa-map-marked-alt fa-3x mb-2"></i>
-              <p class="mb-0">Mapa de ubicación de la clínica - Reemplazar este div con un iframe de Google Maps</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    
 
     <!-- Copyright y enlaces secundarios -->
     <div class="copyright mt-4 pt-3 border-top border-secondary">
@@ -389,6 +376,36 @@
   <!-- Scripts de Bootstrap y FontAwesome -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+  
+  <!-- Script para actualizar automáticamente las imágenes del carrusel -->
+  <script>
+    // Función para actualizar las imágenes con un nuevo parámetro de timestamp
+    function refreshCarouselImages() {
+      const carouselImages = document.querySelectorAll('.carousel-image');
+      const timestamp = new Date().getTime(); // Obtener un timestamp único
+      
+      carouselImages.forEach(function(img) {
+        const originalSrc = img.getAttribute('data-src');
+        img.src = originalSrc + '?v=' + timestamp;
+      });
+    }
+    
+    // Actualizar las imágenes del carrusel cada 30 segundos
+    setInterval(refreshCarouselImages, 30000);
+    
+    // También actualizar las imágenes al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+      refreshCarouselImages();
+      
+      // Actualizar también cuando se cambia de slide en el carrusel
+      const carousel = document.getElementById('carouselExampleIndicators');
+      if (carousel) {
+        carousel.addEventListener('slide.bs.carousel', function() {
+          refreshCarouselImages();
+        });
+      }
+    });
+  </script>
 </body>
 
 </html>
