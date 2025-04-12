@@ -54,29 +54,30 @@ $infoUsuario = $usuario->obtenerUsuarioPorColaborador($infoDoctor['idcolaborador
 
     <div class="row mb-4">
         <div class="col-md-6">
-            <label for="nombreusuario" class="form-label">Nombre de Usuario</label>
+            <label for="nombreusuario" class="form-label required-field">Nombre de Usuario</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="fas fa-user"></i></span>
                 <input type="text" class="form-control" id="nombreusuario" name="nombreusuario" 
                     value="<?= htmlspecialchars($infoUsuario['nombreusuario'] ?? '') ?>" 
                     required minlength="5" maxlength="20">
             </div>
-            <div class="form-text">El nombre de usuario debe tener entre 5 y 20 caracteres.</div>
+            <div class="form-text">El nombre de usuario debe tener entre 5 y 20 caracteres. Se permiten letras, números, guiones y puntos.</div>
         </div>
         <div class="col-md-6">
-            <label for="email" class="form-label">Email</label>
+            <label for="email" class="form-label required-field">Email</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="fas fa-envelope"></i></span>
                 <input type="email" class="form-control" id="emailusuario" name="emailusuario" 
                     value="<?= htmlspecialchars($infoUsuario['email'] ?? $infoDoctor['email'] ?? '') ?>" 
                     required>
             </div>
+            <div class="form-text">Ingrese un correo electrónico válido.</div>
         </div>
     </div>
 
     <div class="row mb-4">
         <div class="col-md-6">
-            <label for="contrasena" class="form-label">Contraseña <?= empty($infoUsuario) ? '' : '(Opcional)' ?></label>
+            <label for="contrasena" class="form-label <?= empty($infoUsuario) ? 'required-field' : '' ?>"><?= empty($infoUsuario) ? 'Contraseña' : 'Contraseña (Opcional)' ?></label>
             <div class="input-group">
                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
                 <input type="password" class="form-control" id="contrasena" name="contrasena" 
@@ -88,11 +89,11 @@ $infoUsuario = $usuario->obtenerUsuarioPorColaborador($infoDoctor['idcolaborador
             </div>
             <div class="form-text">
                 <?= empty($infoUsuario) ? 'La contraseña es obligatoria.' : 'Deje en blanco para mantener la contraseña actual.' ?>
-                Debe tener al menos 8 caracteres.
+                Debe tener al menos 8 caracteres, incluir minúsculas, mayúsculas, números y caracteres especiales.
             </div>
         </div>
         <div class="col-md-6">
-            <label for="confirmarcontrasena" class="form-label">Confirmar Contraseña</label>
+            <label for="confirmarcontrasena" class="form-label <?= empty($infoUsuario) ? 'required-field' : '' ?>">Confirmar Contraseña</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
                 <input type="password" class="form-control" id="confirmarcontrasena" name="confirmarcontrasena" 
@@ -108,14 +109,14 @@ $infoUsuario = $usuario->obtenerUsuarioPorColaborador($infoDoctor['idcolaborador
 
     <div class="row mb-4">
         <div class="col-md-6">
-            <label for="tipousuario" class="form-label">Tipo de Usuario</label>
+            <label for="tipousuario" class="form-label required-field">Tipo de Usuario</label>
             <select class="form-select" id="tipousuario" name="nivelacceso" required>
                 <option value="DOCTOR" selected>Doctor</option>
             </select>
             <div class="form-text">Los doctores tienen acceso específico a sus pacientes y citas.</div>
         </div>
         <div class="col-md-6">
-            <label for="estado" class="form-label">Estado</label>
+            <label for="estado" class="form-label required-field">Estado</label>
             <select class="form-select" id="estado" name="estado" required>
                 <option value="ACTIVO" <?= (isset($infoUsuario['estado']) && $infoUsuario['estado'] == 'ACTIVO') ? 'selected' : '' ?>>Activo</option>
                 <option value="INACTIVO" <?= (isset($infoUsuario['estado']) && $infoUsuario['estado'] == 'INACTIVO') ? 'selected' : '' ?>>Inactivo</option>
@@ -150,6 +151,103 @@ $infoUsuario = $usuario->obtenerUsuarioPorColaborador($infoDoctor['idcolaborador
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Toast notifications
+        function showSuccessToast(message) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: message,
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        }
+        
+        function showErrorToast(message) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: message,
+                showConfirmButton: false,
+                timer: 5000,
+                timerProgressBar: true
+            });
+        }
+        
+        // Helper Functions for validation
+        function markFieldAsValid(field) {
+            if (field) {
+                field.classList.add('is-valid');
+                field.classList.remove('is-invalid');
+            }
+        }
+
+        function markFieldAsInvalid(field) {
+            if (field) {
+                field.classList.add('is-invalid');
+                field.classList.remove('is-valid');
+            }
+        }
+
+        function addFieldHelpMessage(field, message) {
+            if (!field) return;
+            
+            // Eliminar mensaje previo si existe
+            removeFieldHelpMessage(field);
+            
+            // Crear nuevo mensaje
+            const helpDiv = document.createElement('div');
+            helpDiv.className = 'invalid-feedback';
+            helpDiv.id = `help-${field.id}`;
+            helpDiv.textContent = message;
+            
+            // Insertar después del campo o su contenedor
+            if (field.parentNode.classList.contains('input-group')) {
+                field.parentNode.parentNode.appendChild(helpDiv);
+            } else {
+                field.parentNode.appendChild(helpDiv);
+            }
+        }
+
+        function removeFieldHelpMessage(field) {
+            if (!field) return;
+            
+            const helpDiv = document.getElementById(`help-${field.id}`);
+            if (helpDiv && helpDiv.parentNode) {
+                helpDiv.parentNode.removeChild(helpDiv);
+            }
+        }
+        
+        // Función para validar formato de email
+        function validateEmail(email) {
+            const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return re.test(String(email).toLowerCase());
+        }
+
+        // Función para validar la fortaleza de la contraseña
+        function validarFortalezaContrasena(contrasena) {
+            if (!contrasena) return { esValida: true, mensaje: '' }; // Si está vacía y no es usuario nuevo, es válido
+            
+            const tieneMinusculas = /[a-z]/.test(contrasena);
+            const tieneMayusculas = /[A-Z]/.test(contrasena);
+            const tieneNumeros = /[0-9]/.test(contrasena);
+            const tieneEspeciales = /[!@#$%^&*(),.?":{}|<>]/.test(contrasena);
+            
+            // Debe cumplir al menos 3 de 4 criterios
+            let criteriosCumplidos = 0;
+            if (tieneMinusculas) criteriosCumplidos++;
+            if (tieneMayusculas) criteriosCumplidos++;
+            if (tieneNumeros) criteriosCumplidos++;
+            if (tieneEspeciales) criteriosCumplidos++;
+            
+            return {
+                esValida: contrasena.length >= 8 && criteriosCumplidos >= 3,
+                mensaje: 'La contraseña debe tener al menos 8 caracteres y cumplir 3 de 4 criterios: minúsculas, mayúsculas, números y caracteres especiales.'
+            };
+        }
+        
         // Función para mostrar/ocultar contraseña
         const togglePasswordButtons = document.querySelectorAll('.toggle-password');
         
@@ -170,287 +268,277 @@ $infoUsuario = $usuario->obtenerUsuarioPorColaborador($infoDoctor['idcolaborador
                 }
             });
         });
-
+        
         // Validación de nombre de usuario
         const nombreUsuarioInput = document.getElementById('nombreusuario');
-        
-        nombreUsuarioInput.addEventListener('input', function() {
-            // Remover espacios y caracteres especiales
-            this.value = this.value.replace(/[^a-zA-Z0-9._-]/g, '');
-            
-            // Convertir a minúsculas
-            this.value = this.value.toLowerCase();
-        });
-        
-        nombreUsuarioInput.addEventListener('blur', function() {
-            if (this.value.length < 5) {
-                this.classList.add('is-invalid');
-                this.classList.remove('is-valid');
-            } else {
-                this.classList.add('is-valid');
-                this.classList.remove('is-invalid');
+        if (nombreUsuarioInput) {
+            // Validación en tiempo real al escribir
+            nombreUsuarioInput.addEventListener('input', function() {
+                // Remover caracteres no permitidos (solo letras, números, guiones, puntos)
+                this.value = this.value.replace(/[^a-zA-Z0-9._-]/g, '');
                 
-                // Verificar si el nombre de usuario ya existe (excepto el actual)
-                fetch(`../../../controllers/usuario.controller.php?op=verificar_usuario&nombreusuario=${this.value}&idusuario=<?= htmlspecialchars($infoUsuario['idusuario'] ?? '0') ?>`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.existe) {
-                            this.classList.add('is-invalid');
-                            this.classList.remove('is-valid');
-                            
-                            // Mostrar feedback
-                            let feedback = document.getElementById('nombreusuario-feedback');
-                            if (!feedback) {
-                                feedback = document.createElement('div');
-                                feedback.id = 'nombreusuario-feedback';
-                                feedback.className = 'invalid-feedback';
-                                this.parentNode.appendChild(feedback);
+                // Convertir a minúsculas
+                this.value = this.value.toLowerCase();
+                
+                if (this.value.length < 5) {
+                    markFieldAsInvalid(this);
+                    addFieldHelpMessage(this, 'El nombre de usuario debe tener al menos 5 caracteres');
+                } else if (this.value.length > 20) {
+                    markFieldAsInvalid(this);
+                    addFieldHelpMessage(this, 'El nombre de usuario no debe exceder los 20 caracteres');
+                } else {
+                    markFieldAsValid(this);
+                    removeFieldHelpMessage(this);
+                }
+            });
+            
+            // Validación al perder el foco (para verificar duplicados)
+            nombreUsuarioInput.addEventListener('blur', function() {
+                if (this.value.length >= 5 && this.value.length <= 20) {
+                    // Verificar si el nombre de usuario ya existe (excepto el actual)
+                    fetch(`../../../controllers/usuario.controller.php?op=verificar_usuario&nombreusuario=${this.value}&idusuario=<?= htmlspecialchars($infoUsuario['idusuario'] ?? '0') ?>`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.existe) {
+                                markFieldAsInvalid(this);
+                                addFieldHelpMessage(this, 'Este nombre de usuario ya está en uso');
+                                showErrorToast('Nombre de usuario duplicado');
+                            } else {
+                                markFieldAsValid(this);
+                                removeFieldHelpMessage(this);
                             }
-                            feedback.textContent = 'Este nombre de usuario ya está en uso.';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
-            }
-        });
-
+                        })
+                        .catch(error => {
+                            console.error('Error al verificar nombre de usuario:', error);
+                            showErrorToast('Error al verificar disponibilidad del nombre de usuario');
+                        });
+                }
+            });
+        }
+        
         // Validación de email
         const emailInput = document.getElementById('emailusuario');
-        
-        emailInput.addEventListener('blur', function() {
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (emailInput) {
+            // Validación en tiempo real
+            emailInput.addEventListener('input', function() {
+                if (validateEmail(this.value)) {
+                    markFieldAsValid(this);
+                    removeFieldHelpMessage(this);
+                } else {
+                    markFieldAsInvalid(this);
+                    addFieldHelpMessage(this, 'Ingrese un correo electrónico válido');
+                }
+            });
             
-            if (!emailPattern.test(this.value)) {
-                this.classList.add('is-invalid');
-                this.classList.remove('is-valid');
-            } else {
-                this.classList.add('is-valid');
-                this.classList.remove('is-invalid');
-                
-                // Verificar si el email ya existe (excepto el actual)
-                fetch(`../../../controllers/usuario.controller.php?op=verificar_email&email=${this.value}&idusuario=<?= htmlspecialchars($infoUsuario['idusuario'] ?? '0') ?>`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.existe) {
-                            this.classList.add('is-invalid');
-                            this.classList.remove('is-valid');
-                            
-                            // Mostrar feedback
-                            let feedback = document.getElementById('emailusuario-feedback');
-                            if (!feedback) {
-                                feedback = document.createElement('div');
-                                feedback.id = 'emailusuario-feedback';
-                                feedback.className = 'invalid-feedback';
-                                this.parentNode.appendChild(feedback);
+            // Verificar duplicados al perder el foco
+            emailInput.addEventListener('blur', function() {
+                if (validateEmail(this.value)) {
+                    // Verificar si el email ya existe (excepto el actual)
+                    fetch(`../../../controllers/usuario.controller.php?op=verificar_email&email=${this.value}&idusuario=<?= htmlspecialchars($infoUsuario['idusuario'] ?? '0') ?>`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.existe) {
+                                markFieldAsInvalid(this);
+                                addFieldHelpMessage(this, 'Este email ya está asociado con otro usuario');
+                                showErrorToast('Email duplicado');
+                            } else {
+                                markFieldAsValid(this);
+                                removeFieldHelpMessage(this);
                             }
-                            feedback.textContent = 'Este email ya está asociado con otro usuario.';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
-            }
-        });
+                        })
+                        .catch(error => {
+                            console.error('Error al verificar email:', error);
+                            showErrorToast('Error al verificar disponibilidad del email');
+                        });
+                }
+            });
+        }
 
         // Validación de contraseñas
         const contrasenaInput = document.getElementById('contrasena');
         const confirmarContrasenaInput = document.getElementById('confirmarcontrasena');
         
-        // Función para validar la fortaleza de la contraseña
-        function validarFortalezaContrasena(contrasena) {
-            const tieneMinusculas = /[a-z]/.test(contrasena);
-            const tieneMayusculas = /[A-Z]/.test(contrasena);
-            const tieneNumeros = /[0-9]/.test(contrasena);
-            const tieneEspeciales = /[!@#$%^&*(),.?":{}|<>]/.test(contrasena);
-            
-            // Debe cumplir al menos 3 de 4 criterios
-            let criteriosCumplidos = 0;
-            if (tieneMinusculas) criteriosCumplidos++;
-            if (tieneMayusculas) criteriosCumplidos++;
-            if (tieneNumeros) criteriosCumplidos++;
-            if (tieneEspeciales) criteriosCumplidos++;
-            
-            return {
-                esValida: contrasena.length >= 8 && criteriosCumplidos >= 3,
-                mensaje: 'La contraseña debe tener al menos 8 caracteres y cumplir 3 de 4 criterios: minúsculas, mayúsculas, números y caracteres especiales.'
-            };
+        if (contrasenaInput) {
+            contrasenaInput.addEventListener('input', function() {
+                if (this.value) {
+                    const validacion = validarFortalezaContrasena(this.value);
+                    
+                    if (validacion.esValida) {
+                        markFieldAsValid(this);
+                        removeFieldHelpMessage(this);
+                    } else {
+                        markFieldAsInvalid(this);
+                        addFieldHelpMessage(this, validacion.mensaje);
+                    }
+                } else {
+                    // Si está vacío y no es un usuario nuevo, es válido (mantiene la contraseña actual)
+                    if ('<?= empty($infoUsuario) ? '0' : '1' ?>' === '1') {
+                        this.classList.remove('is-invalid');
+                        this.classList.remove('is-valid');
+                        removeFieldHelpMessage(this);
+                    } else {
+                        markFieldAsInvalid(this);
+                        addFieldHelpMessage(this, 'La contraseña es obligatoria para nuevos usuarios');
+                    }
+                }
+                
+                // Validar también confirmar contraseña
+                if (confirmarContrasenaInput.value) {
+                    if (this.value !== confirmarContrasenaInput.value) {
+                        markFieldAsInvalid(confirmarContrasenaInput);
+                        addFieldHelpMessage(confirmarContrasenaInput, 'Las contraseñas no coinciden');
+                    } else {
+                        markFieldAsValid(confirmarContrasenaInput);
+                        removeFieldHelpMessage(confirmarContrasenaInput);
+                    }
+                }
+            });
         }
         
-        contrasenaInput.addEventListener('input', function() {
-            if (this.value) {
-                const validacion = validarFortalezaContrasena(this.value);
-                
-                if (validacion.esValida) {
-                    this.classList.add('is-valid');
-                    this.classList.remove('is-invalid');
-                } else {
-                    this.classList.add('is-invalid');
-                    this.classList.remove('is-valid');
-                    
-                    // Mostrar feedback
-                    let feedback = document.getElementById('contrasena-feedback');
-                    if (!feedback) {
-                        feedback = document.createElement('div');
-                        feedback.id = 'contrasena-feedback';
-                        feedback.className = 'invalid-feedback';
-                        this.parentNode.appendChild(feedback);
+        if (confirmarContrasenaInput) {
+            confirmarContrasenaInput.addEventListener('input', function() {
+                if (contrasenaInput.value && this.value) {
+                    if (this.value !== contrasenaInput.value) {
+                        markFieldAsInvalid(this);
+                        addFieldHelpMessage(this, 'Las contraseñas no coinciden');
+                    } else {
+                        markFieldAsValid(this);
+                        removeFieldHelpMessage(this);
                     }
-                    feedback.textContent = validacion.mensaje;
-                }
-            } else {
-                // Si está vacío y no es un usuario nuevo, es válido (mantiene la contraseña actual)
-                if ('<?= empty($infoUsuario) ? '0' : '1' ?>' === '1') {
-                    this.classList.remove('is-invalid');
-                    this.classList.remove('is-valid');
                 } else {
-                    this.classList.add('is-invalid');
                     this.classList.remove('is-valid');
+                    this.classList.remove('is-invalid');
+                    removeFieldHelpMessage(this);
                 }
-            }
-            
-            // Validar que coincida con confirmar contraseña
-            if (confirmarContrasenaInput.value && this.value !== confirmarContrasenaInput.value) {
-                confirmarContrasenaInput.classList.add('is-invalid');
-                confirmarContrasenaInput.classList.remove('is-valid');
-            } else if (confirmarContrasenaInput.value) {
-                confirmarContrasenaInput.classList.add('is-valid');
-                confirmarContrasenaInput.classList.remove('is-invalid');
-            }
-        });
+            });
+        }
         
-        confirmarContrasenaInput.addEventListener('input', function() {
-            if (contrasenaInput.value && this.value !== contrasenaInput.value) {
-                this.classList.add('is-invalid');
-                this.classList.remove('is-valid');
-                
-                // Mostrar feedback
-                let feedback = document.getElementById('confirmarcontrasena-feedback');
-                if (!feedback) {
-                    feedback = document.createElement('div');
-                    feedback.id = 'confirmarcontrasena-feedback';
-                    feedback.className = 'invalid-feedback';
-                    this.parentNode.appendChild(feedback);
-                }
-                feedback.textContent = 'Las contraseñas no coinciden.';
-            } else if (contrasenaInput.value) {
-                this.classList.add('is-valid');
-                this.classList.remove('is-invalid');
-            } else {
-                this.classList.remove('is-valid');
-                this.classList.remove('is-invalid');
-            }
-        });
-
-        // Manejar envío del formulario
+        // Validación del formulario completo
         const form = document.getElementById('formEditarCredenciales');
         
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Validar campos
-            let isValid = true;
-            
-            // Validar nombre de usuario
-            if (nombreUsuarioInput.value.length < 5) {
-                nombreUsuarioInput.classList.add('is-invalid');
-                isValid = false;
-            }
-            
-            // Validar email
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailPattern.test(emailInput.value)) {
-                emailInput.classList.add('is-invalid');
-                isValid = false;
-            }
-            
-            // Validar contraseña si está establecida
-            if (contrasenaInput.value) {
-                const validacion = validarFortalezaContrasena(contrasenaInput.value);
-                if (!validacion.esValida) {
-                    contrasenaInput.classList.add('is-invalid');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Validar campos
+                let isValid = true;
+                
+                // Validar nombre de usuario
+                if (nombreUsuarioInput.value.length < 5 || nombreUsuarioInput.value.length > 20) {
+                    markFieldAsInvalid(nombreUsuarioInput);
+                    addFieldHelpMessage(nombreUsuarioInput, 'El nombre de usuario debe tener entre 5 y 20 caracteres');
                     isValid = false;
                 }
                 
-                // Validar que las contraseñas coincidan
-                if (contrasenaInput.value !== confirmarContrasenaInput.value) {
-                    confirmarContrasenaInput.classList.add('is-invalid');
+                // Validar email
+                if (!validateEmail(emailInput.value)) {
+                    markFieldAsInvalid(emailInput);
+                    addFieldHelpMessage(emailInput, 'Ingrese un correo electrónico válido');
                     isValid = false;
                 }
-            } else if ('<?= empty($infoUsuario) ? '1' : '0' ?>' === '1') {
-                // Si es un usuario nuevo y no hay contraseña
-                contrasenaInput.classList.add('is-invalid');
-                isValid = false;
-            }
-            
-            if (!isValid) {
-                // Mostrar mensaje de error
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de validación',
-                    text: 'Por favor corrija los errores en el formulario.'
-                });
-                return;
-            }
-            
-            // Mostrar cargando
-            Swal.fire({
-                title: 'Guardando credenciales',
-                text: 'Por favor espere...',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            // Enviar datos mediante AJAX
-            const formData = new FormData(form);
-            
-            fetch('../../../controllers/usuario.controller.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                Swal.close();
                 
-                if (data.status) {
-                    // Cerrar el modal
-                    if (window.parent && window.parent.bootstrap) {
-                        const modal = window.parent.bootstrap.Modal.getInstance(window.parent.document.getElementById('modalCredenciales'));
-                        if (modal) {
-                            modal.hide();
-                        }
+                // Validar contraseña si está establecida
+                if (contrasenaInput.value) {
+                    const validacion = validarFortalezaContrasena(contrasenaInput.value);
+                    if (!validacion.esValida) {
+                        markFieldAsInvalid(contrasenaInput);
+                        addFieldHelpMessage(contrasenaInput, validacion.mensaje);
+                        isValid = false;
                     }
                     
-                    // Mostrar mensaje de éxito
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Credenciales guardadas',
-                        text: data.mensaje || 'Las credenciales de acceso se han guardado correctamente'
-                    }).then(() => {
-                        // Recargar la lista de doctores
-                        if (window.parent && window.parent.cargarDoctores) {
-                            window.parent.cargarDoctores();
-                        }
-                    });
-                } else {
+                    // Validar que las contraseñas coincidan
+                    if (contrasenaInput.value !== confirmarContrasenaInput.value) {
+                        markFieldAsInvalid(confirmarContrasenaInput);
+                        addFieldHelpMessage(confirmarContrasenaInput, 'Las contraseñas no coinciden');
+                        isValid = false;
+                    }
+                } else if ('<?= empty($infoUsuario) ? '1' : '0' ?>' === '1') {
+                    // Si es un usuario nuevo y no hay contraseña
+                    markFieldAsInvalid(contrasenaInput);
+                    addFieldHelpMessage(contrasenaInput, 'La contraseña es obligatoria para nuevos usuarios');
+                    isValid = false;
+                }
+                
+                if (!isValid) {
+                    // Mostrar mensaje de error
                     Swal.fire({
                         icon: 'error',
-                        title: 'Error',
-                        text: data.mensaje || 'No se pudieron guardar las credenciales'
+                        title: 'Error de validación',
+                        text: 'Por favor corrija los errores en el formulario.'
                     });
+                    
+                    // Hacer scroll al primer campo con error
+                    const firstInvalidField = form.querySelector('.is-invalid');
+                    if (firstInvalidField) {
+                        firstInvalidField.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                        firstInvalidField.focus();
+                    }
+                    
+                    return;
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
+                
+                // Mostrar cargando
                 Swal.fire({
-                    icon: 'error',
-                    title: 'Error de conexión',
-                    text: 'No se pudo conectar con el servidor'
+                    title: 'Guardando credenciales',
+                    text: 'Por favor espere...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Enviar datos mediante AJAX
+                const formData = new FormData(form);
+                
+                fetch('../../../controllers/usuario.controller.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    Swal.close();
+                    
+                    if (data.status) {
+                        // Cerrar el modal
+                        if (window.parent && window.parent.bootstrap) {
+                            const modal = window.parent.bootstrap.Modal.getInstance(window.parent.document.getElementById('modalCredenciales'));
+                            if (modal) {
+                                modal.hide();
+                            }
+                        }
+                        
+                        // Mostrar mensaje de éxito
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Credenciales guardadas',
+                            text: data.mensaje || 'Las credenciales de acceso se han guardado correctamente'
+                        }).then(() => {
+                            // Recargar la lista de doctores
+                            if (window.parent && window.parent.cargarDoctores) {
+                                window.parent.cargarDoctores();
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.mensaje || 'No se pudieron guardar las credenciales'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor'
+                    });
                 });
             });
-        });
+        }
     });
 </script>
 
@@ -486,5 +574,10 @@ $infoUsuario = $usuario->obtenerUsuarioPorColaborador($infoDoctor['idcolaborador
     .input-group .form-control.is-invalid,
     .input-group .form-control.is-valid {
         z-index: 1;
+    }
+    
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
     }
 </style>

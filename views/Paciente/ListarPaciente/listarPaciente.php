@@ -549,7 +549,7 @@ require_once '../../include/header.administrador.php';
 
                             if (!apellido.includes(filtroNombre) && !nombre.includes(filtroNombre)) {
                                 return false;
-                            } 
+                            }
 
                             return true;
                         }
@@ -567,7 +567,7 @@ require_once '../../include/header.administrador.php';
                 if (filtroGenero) {
                     // Formato correcto para filtrar por género
                     let valorBusqueda = '';
-                    
+
                     // Convertir valor del filtro a lo que muestra la tabla
                     switch (filtroGenero) {
                         case 'MASCULINO':
@@ -582,7 +582,7 @@ require_once '../../include/header.administrador.php';
                         default:
                             valorBusqueda = '';
                     }
-                    
+
                     tablaPacientes.columns(6).search(valorBusqueda);
                 } else {
                     tablaPacientes.columns(6).search('');
@@ -604,7 +604,7 @@ require_once '../../include/header.administrador.php';
             // Función para aplicar filtros adicionales
             function aplicarFiltrosAdicionales() {
                 // Aplicar filtros iniciales si hay valores en los campos
-                if ($('#filtroNombre').val() || $('#filtroDocumento').val() || 
+                if ($('#filtroNombre').val() || $('#filtroDocumento').val() ||
                     $('#filtroGenero').val() || $('#filtroFechaRegistro').val()) {
                     aplicarFiltros();
                 }
@@ -801,7 +801,7 @@ require_once '../../include/header.administrador.php';
                 });
             }
 
-            // Función para eliminar paciente
+            // Función para eliminar paciente - AQUÍ ESTÁ EL PROBLEMA QUE DEBES CORREGIR
             function eliminarPaciente(idPaciente) {
                 // Mostrar loading
                 Swal.fire({
@@ -826,6 +826,7 @@ require_once '../../include/header.administrador.php';
                     success: function(response) {
                         Swal.close();
 
+                        // CORRECCIÓN AQUÍ: Verificar el campo 'status' en lugar de 'resultado'
                         if (response.status) {
                             // Mostrar mensaje de éxito
                             Swal.fire({
@@ -855,6 +856,7 @@ require_once '../../include/header.administrador.php';
                             type: 'GET',
                             dataType: 'json',
                             success: function(response) {
+                                // CORRECCIÓN AQUÍ: Verificar el campo 'status' en lugar de 'resultado' 
                                 if (response.status) {
                                     // Mostrar mensaje de éxito
                                     Swal.fire({
@@ -1690,4 +1692,3 @@ require_once '../../include/header.administrador.php';
 </body>
 
 </html>
-

@@ -50,7 +50,7 @@ $especialidades = $especialidad->listarEspecialidades();
     <!-- Especialidad -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <label for="especialidad" class="form-label">Especialidad</label>
+            <label for="especialidad" class="form-label required-field">Especialidad</label>
             <div class="input-group">
                 <select class="form-select" id="especialidad" name="idespecialidad" required>
                     <option value="">Seleccione...</option>
@@ -67,20 +67,24 @@ $especialidades = $especialidad->listarEspecialidades();
                     <i class="fas fa-plus"></i> Nueva Especialidad
                 </button>
             </div>
+            <div id="help-especialidad" class="form-text">Seleccione la especialidad médica del doctor.</div>
         </div>
     </div>
 
     <!-- Precio de Atención -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <label for="precioatencion" class="form-label">Precio de Atención</label>
+            <label for="precioatencion" class="form-label required-field">Precio de Atención</label>
             <div class="input-group">
                 <span class="input-group-text">S/.</span>
                 <input type="number" class="form-control" id="precioatencion" name="precioatencion" 
                     value="<?= htmlspecialchars($infoDoctor['precioatencion'] ?? '') ?>" 
                     step="0.01" min="0" required>
+                <button type="button" class="btn btn-outline-primary" id="btnEditarPrecio">
+                    <i class="fas fa-edit"></i> Editar Precio
+                </button>
             </div>
-            <small class="text-muted">El precio en soles para la consulta médica con este doctor.</small>
+            <div id="help-precioatencion" class="form-text">El precio en soles para la consulta médica con este doctor.</div>
         </div>
     </div>
 
@@ -109,15 +113,17 @@ $especialidades = $especialidad->listarEspecialidades();
             <div class="modal-body">
                 <form id="formNuevaEspecialidad">
                     <div class="mb-3">
-                        <label for="nombreEspecialidad" class="form-label">Nombre de Especialidad</label>
+                        <label for="nombreEspecialidad" class="form-label required-field">Nombre de Especialidad</label>
                         <input type="text" class="form-control" id="nombreEspecialidad" required>
+                        <div id="help-nombreEspecialidad" class="form-text">Ingrese el nombre de la nueva especialidad médica.</div>
                     </div>
                     <div class="mb-3">
-                        <label for="precioEspecialidad" class="form-label">Precio de Atención</label>
+                        <label for="precioEspecialidad" class="form-label required-field">Precio de Atención</label>
                         <div class="input-group">
                             <span class="input-group-text">S/.</span>
                             <input type="number" class="form-control" id="precioEspecialidad" step="0.01" min="0" required>
                         </div>
+                        <div id="help-precioEspecialidad" class="form-text">Ingrese el precio de consulta para esta especialidad.</div>
                     </div>
                 </form>
             </div>
@@ -129,13 +135,101 @@ $especialidades = $especialidad->listarEspecialidades();
     </div>
 </div>
 
+<!-- Modal para editar precio de atención -->
+<div class="modal fade" id="modalEditarPrecio" tabindex="-1" aria-labelledby="modalEditarPrecioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalEditarPrecioLabel">Editar Precio de Atención</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarPrecio">
+                    <div class="mb-3">
+                        <label for="especialidadActual" class="form-label">Especialidad</label>
+                        <input type="text" class="form-control" id="especialidadActual" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nuevoPrecioAtencion" class="form-label required-field">Nuevo Precio de Atención</label>
+                        <div class="input-group">
+                            <span class="input-group-text">S/.</span>
+                            <input type="number" class="form-control" id="nuevoPrecioAtencion" step="0.01" min="0" required>
+                        </div>
+                        <div id="help-nuevoPrecioAtencion" class="form-text">Ingrese el nuevo precio para esta especialidad.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarPrecio">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Configurar el cambio de especialidad para actualizar el precio
         const especialidadSelect = document.getElementById('especialidad');
         const precioInput = document.getElementById('precioatencion');
         
+        // Función para validar el precio
+        function validatePrecio(input) {
+            const precio = parseFloat(input.value);
+            
+            if (isNaN(precio) || precio <= 0) {
+                markFieldAsInvalid(input);
+                document.getElementById('help-precioatencion').classList.add('text-danger');
+                document.getElementById('help-precioatencion').textContent = 'El precio debe ser mayor a cero';
+                return false;
+            } else {
+                markFieldAsValid(input);
+                document.getElementById('help-precioatencion').classList.remove('text-danger');
+                document.getElementById('help-precioatencion').textContent = 'El precio en soles para la consulta médica con este doctor.';
+                return true;
+            }
+        }
+        
+        // Validar el precio cuando cambie
+        precioInput.addEventListener('change', function() {
+            validatePrecio(this);
+        });
+        
+        precioInput.addEventListener('input', function() {
+            // Permitir solo números y un punto decimal
+            let value = this.value;
+            
+            // Eliminar caracteres no válidos
+            value = value.replace(/[^\d.]/g, '');
+            
+            // Asegurar que solo hay un punto decimal
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            this.value = value;
+        });
+        
+        // Función para validar la especialidad
+        function validateEspecialidad(select) {
+            if (!select.value) {
+                markFieldAsInvalid(select);
+                document.getElementById('help-especialidad').classList.add('text-danger');
+                document.getElementById('help-especialidad').textContent = 'Debe seleccionar una especialidad';
+                return false;
+            } else {
+                markFieldAsValid(select);
+                document.getElementById('help-especialidad').classList.remove('text-danger');
+                document.getElementById('help-especialidad').textContent = 'Especialidad seleccionada correctamente.';
+                return true;
+            }
+        }
+        
+        // Validar especialidad cuando cambie
         especialidadSelect.addEventListener('change', function() {
+            validateEspecialidad(this);
+            
             if (this.value) {
                 // Hacer una petición AJAX para obtener el precio de la especialidad
                 fetch(`../../../controllers/especialidad.controller.php?op=obtener&id=${this.value}`)
@@ -143,34 +237,92 @@ $especialidades = $especialidad->listarEspecialidades();
                     .then(data => {
                         if (data.status && data.data) {
                             precioInput.value = data.data.precioatencion;
-                            precioInput.classList.add('is-valid');
+                            validatePrecio(precioInput);
+                            showSuccessToast('Precio actualizado según la especialidad seleccionada');
                         }
                     })
                     .catch(error => {
                         console.error('Error al obtener precio de especialidad:', error);
+                        showErrorToast('Error al obtener el precio de la especialidad');
                     });
+            } else {
+                precioInput.value = '';
+                precioInput.classList.remove('is-valid', 'is-invalid');
+                document.getElementById('help-precioatencion').classList.remove('text-danger');
+                document.getElementById('help-precioatencion').textContent = 'El precio en soles para la consulta médica con este doctor.';
             }
         });
 
         // Configurar el evento del botón para mostrar el modal de nueva especialidad
         const btnNuevaEspecialidad = document.getElementById('btnNuevaEspecialidad');
         btnNuevaEspecialidad.addEventListener('click', function() {
+            // Limpiar el formulario
+            document.getElementById('formNuevaEspecialidad').reset();
+            document.getElementById('nombreEspecialidad').classList.remove('is-valid', 'is-invalid');
+            document.getElementById('precioEspecialidad').classList.remove('is-valid', 'is-invalid');
+            document.getElementById('help-nombreEspecialidad').classList.remove('text-danger');
+            document.getElementById('help-precioEspecialidad').classList.remove('text-danger');
+            
+            // Mostrar el modal
             const modalNuevaEspecialidad = new bootstrap.Modal(document.getElementById('modalNuevaEspecialidad'));
             modalNuevaEspecialidad.show();
+        });
+
+        // Configurar el evento del botón para editar el precio
+        const btnEditarPrecio = document.getElementById('btnEditarPrecio');
+        btnEditarPrecio.addEventListener('click', function() {
+            // Verificar si hay una especialidad seleccionada
+            if (!especialidadSelect.value) {
+                showErrorToast('Debe seleccionar una especialidad primero');
+                return;
+            }
+            
+            // Obtener el texto de la especialidad seleccionada
+            const especialidadTexto = especialidadSelect.options[especialidadSelect.selectedIndex].text;
+            
+            // Configurar el modal
+            document.getElementById('especialidadActual').value = especialidadTexto;
+            document.getElementById('nuevoPrecioAtencion').value = precioInput.value;
+            document.getElementById('nuevoPrecioAtencion').classList.remove('is-valid', 'is-invalid');
+            document.getElementById('help-nuevoPrecioAtencion').classList.remove('text-danger');
+            
+            // Mostrar el modal
+            const modalEditarPrecio = new bootstrap.Modal(document.getElementById('modalEditarPrecio'));
+            modalEditarPrecio.show();
         });
 
         // Configurar el evento del botón para guardar la nueva especialidad
         const btnGuardarEspecialidad = document.getElementById('btnGuardarEspecialidad');
         btnGuardarEspecialidad.addEventListener('click', function() {
-            const nombreEspecialidad = document.getElementById('nombreEspecialidad').value;
-            const precioEspecialidad = document.getElementById('precioEspecialidad').value;
-
-            if (!nombreEspecialidad || !precioEspecialidad) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Campos incompletos',
-                    text: 'Por favor, complete todos los campos requeridos.'
-                });
+            const nombreEspecialidad = document.getElementById('nombreEspecialidad');
+            const precioEspecialidad = document.getElementById('precioEspecialidad');
+            let isValid = true;
+            
+            // Validar el nombre de la especialidad
+            if (!nombreEspecialidad.value.trim()) {
+                markFieldAsInvalid(nombreEspecialidad);
+                document.getElementById('help-nombreEspecialidad').classList.add('text-danger');
+                document.getElementById('help-nombreEspecialidad').textContent = 'El nombre de la especialidad es obligatorio';
+                isValid = false;
+            } else {
+                markFieldAsValid(nombreEspecialidad);
+                document.getElementById('help-nombreEspecialidad').classList.remove('text-danger');
+            }
+            
+            // Validar el precio de la especialidad
+            const precio = parseFloat(precioEspecialidad.value);
+            if (isNaN(precio) || precio <= 0) {
+                markFieldAsInvalid(precioEspecialidad);
+                document.getElementById('help-precioEspecialidad').classList.add('text-danger');
+                document.getElementById('help-precioEspecialidad').textContent = 'El precio debe ser mayor a cero';
+                isValid = false;
+            } else {
+                markFieldAsValid(precioEspecialidad);
+                document.getElementById('help-precioEspecialidad').classList.remove('text-danger');
+            }
+            
+            if (!isValid) {
+                showErrorToast('Por favor, complete todos los campos requeridos');
                 return;
             }
 
@@ -185,8 +337,8 @@ $especialidades = $especialidad->listarEspecialidades();
             });
 
             const formData = new FormData();
-            formData.append('especialidad', nombreEspecialidad);
-            formData.append('precioatencion', precioEspecialidad);
+            formData.append('especialidad', nombreEspecialidad.value);
+            formData.append('precioatencion', precioEspecialidad.value);
 
             fetch('../../../controllers/especialidad.controller.php?op=registrar', {
                     method: 'POST',
@@ -232,6 +384,41 @@ $especialidades = $especialidad->listarEspecialidades();
                 });
         });
 
+        // Configurar el evento del botón para guardar el nuevo precio
+        const btnGuardarPrecio = document.getElementById('btnGuardarPrecio');
+        btnGuardarPrecio.addEventListener('click', function() {
+            const nuevoPrecioInput = document.getElementById('nuevoPrecioAtencion');
+            const nuevoPrecio = parseFloat(nuevoPrecioInput.value);
+            
+            if (isNaN(nuevoPrecio) || nuevoPrecio <= 0) {
+                markFieldAsInvalid(nuevoPrecioInput);
+                document.getElementById('help-nuevoPrecioAtencion').classList.add('text-danger');
+                document.getElementById('help-nuevoPrecioAtencion').textContent = 'El precio debe ser mayor a cero';
+                return;
+            }
+            
+            // Mostrar loader
+            Swal.fire({
+                title: 'Actualizando...',
+                text: 'Por favor espere mientras se actualiza el precio.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Actualizar en el formulario principal
+            precioInput.value = nuevoPrecioInput.value;
+            validatePrecio(precioInput);
+            
+            // Cerrar el modal
+            bootstrap.Modal.getInstance(document.getElementById('modalEditarPrecio')).hide();
+            
+            // Mostrar mensaje de éxito
+            Swal.close();
+            showSuccessToast('Precio actualizado correctamente');
+        });
+
         // Función para cargar y actualizar el listado de especialidades
         function cargarEspecialidades(seleccionarId = null) {
             fetch('../../../controllers/especialidad.controller.php?op=listar')
@@ -253,6 +440,7 @@ $especialidades = $especialidad->listarEspecialidades();
                                 option.selected = true;
                                 // Cargar también el precio
                                 document.getElementById('precioatencion').value = esp.precioatencion;
+                                validatePrecio(document.getElementById('precioatencion'));
                             } else if (esp.idespecialidad == valorActual) {
                                 // Mantener la selección actual si no hay ID nuevo
                                 option.selected = true;
@@ -268,10 +456,12 @@ $especialidades = $especialidad->listarEspecialidades();
                         }
                     } else {
                         console.error('Formato de respuesta inesperado:', result);
+                        showErrorToast('Error al cargar las especialidades');
                     }
                 })
                 .catch(error => {
                     console.error('Error al cargar especialidades:', error);
+                    showErrorToast('Error al cargar las especialidades');
                 });
         }
 
@@ -281,27 +471,20 @@ $especialidades = $especialidad->listarEspecialidades();
             formDatosProfesionales.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                // Verificar campos obligatorios
-                const especialidad = document.getElementById('especialidad');
-                const precio = document.getElementById('precioatencion');
+                let isValid = true;
                 
-                if (!especialidad.value) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Campo obligatorio',
-                        text: 'Debe seleccionar una especialidad.'
-                    });
-                    especialidad.classList.add('is-invalid');
-                    return;
+                // Validar especialidad
+                if (!validateEspecialidad(document.getElementById('especialidad'))) {
+                    isValid = false;
                 }
                 
-                if (!precio.value || parseFloat(precio.value) <= 0) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Campo obligatorio',
-                        text: 'El precio de atención debe ser mayor a cero.'
-                    });
-                    precio.classList.add('is-invalid');
+                // Validar precio
+                if (!validatePrecio(document.getElementById('precioatencion'))) {
+                    isValid = false;
+                }
+                
+                if (!isValid) {
+                    showErrorToast('Por favor, corrija los errores en el formulario');
                     return;
                 }
                 
@@ -365,10 +548,73 @@ $especialidades = $especialidad->listarEspecialidades();
                 });
             });
         }
+        
+        // Funciones de utilidad para marcar campos como válidos/inválidos
+        function markFieldAsValid(field) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        }
+
+        function markFieldAsInvalid(field) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+        }
+
+        // Funciones para mostrar notificaciones
+        function showSuccessToast(message) {
+            if (typeof Swal !== 'undefined') {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
+                });
+
+                Toast.fire({
+                    icon: 'success',
+                    title: message
+                });
+            } else {
+                console.log('Éxito:', message);
+            }
+        }
+
+        function showErrorToast(message) {
+            if (typeof Swal !== 'undefined') {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
+                });
+
+                Toast.fire({
+                    icon: 'error',
+                    title: message
+                });
+            } else {
+                console.error('Error:', message);
+            }
+        }
     });
 </script>
 
 <style>
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+    
     .is-valid {
         border-color: #198754 !important;
         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
@@ -391,5 +637,9 @@ $especialidades = $especialidad->listarEspecialidades();
         margin-top: 0.25rem;
         font-size: 0.875em;
         color: #dc3545;
+    }
+    
+    .text-danger {
+        color: #dc3545 !important;
     }
 </style>
