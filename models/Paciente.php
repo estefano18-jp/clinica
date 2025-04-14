@@ -336,18 +336,38 @@ class Paciente extends Conexion
     public function eliminar($idpaciente)
     {
         try {
-            // Llamamos al procedimiento almacenado para eliminar el paciente y sus alergias
-            $stmt = $this->pdo->prepare("CALL spu_eliminar_paciente_completo(?)");
+            // Validar que el ID sea numérico
+            if (!is_numeric($idpaciente)) {
+                return [
+                    'resultado' => 0,
+                    'mensaje' => 'ID de paciente inválido'
+                ];
+            }
+
+            // Llamamos al procedimiento almacenado mejorado
+            $stmt = $this->pdo->prepare("CALL spu_eliminar_paciente_completo_con_dependencias(?)");
             $stmt->bindParam(1, $idpaciente, PDO::PARAM_INT);
             $stmt->execute();
 
             $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            return [
-                'resultado' => $resultado['resultado'] ?? 0,
-                'mensaje' => $resultado['mensaje'] ?? 'Error al eliminar el paciente'
-            ];
+            // Verificar si la respuesta tiene la estructura esperada
+            if ($resultado && isset($resultado['resultado']) && isset($resultado['mensaje'])) {
+                return [
+                    'resultado' => intval($resultado['resultado']),
+                    'mensaje' => $resultado['mensaje']
+                ];
+            } else {
+                // Si la respuesta del procedimiento no tiene la estructura esperada
+                return [
+                    'resultado' => 0,
+                    'mensaje' => 'Error en la respuesta del servidor al eliminar el paciente'
+                ];
+            }
         } catch (Exception $e) {
+            // Registrar el error para depuración
+            error_log("Error al eliminar paciente ID $idpaciente: " . $e->getMessage());
+
             return [
                 'resultado' => 0,
                 'mensaje' => 'Error al eliminar el paciente: ' . $e->getMessage()

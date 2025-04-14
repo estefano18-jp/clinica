@@ -299,12 +299,28 @@ class PacienteController
         if (isset($_GET['idpaciente']) || isset($_POST['idpaciente'])) {
             $idpaciente = isset($_GET['idpaciente']) ? $_GET['idpaciente'] : $_POST['idpaciente'];
 
+            // Validar que el ID sea numérico
+            if (!is_numeric($idpaciente)) {
+                echo json_encode([
+                    'status' => false,
+                    'mensaje' => 'ID de paciente inválido'
+                ]);
+                return;
+            }
+
             // Obtener el resultado de la operación
             $resultado = $this->modelo->eliminar($idpaciente);
 
+            // Loguear el resultado para depuración
+            error_log("Resultado eliminación paciente ID $idpaciente: " . json_encode($resultado));
+
+            // Asegurarse de que el resultado tiene el formato esperado
+            $status = isset($resultado['resultado']) && intval($resultado['resultado']) == 1;
+            $mensaje = isset($resultado['mensaje']) ? $resultado['mensaje'] : 'Error al eliminar el paciente';
+
             echo json_encode([
-                'status' => isset($resultado['resultado']) ? $resultado['resultado'] == 1 : false,
-                'mensaje' => isset($resultado['mensaje']) ? $resultado['mensaje'] : 'Error al eliminar el paciente'
+                'status' => $status,
+                'mensaje' => $mensaje
             ]);
         } else {
             echo json_encode([

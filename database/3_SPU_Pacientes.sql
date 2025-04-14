@@ -299,7 +299,7 @@ DELIMITER ;
 -- DE EDU
 DELIMITER //
 CREATE PROCEDURE spu_eliminar_paciente_completo(
-    IN p_idpaciente INT
+    IN p_idpaciente INT 
 )
 BEGIN
     DECLARE v_idpersona INT;
@@ -337,6 +337,105 @@ BEGIN
     END IF;
 END //
 DELIMITER ;
+
+USE clinicaDB;
+
+DELIMITER //
+CREATE PROCEDURE spu_eliminar_paciente_completo_con_dependencias(
+    IN p_idpaciente INT 
+)
+BEGIN
+    DECLARE v_idpersona INT;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SELECT 0 AS resultado, 'Error al eliminar el paciente' AS mensaje;
+    END;
+    
+    -- Obtener el idpersona del paciente
+    SELECT idpersona INTO v_idpersona 
+    FROM pacientes 
+    WHERE idpaciente = p_idpaciente;
+    
+    -- Verificar que el paciente existe
+    IF v_idpersona IS NULL THEN
+        SELECT 0 AS resultado, 'El paciente no existe' AS mensaje;
+    ELSE
+        -- Iniciar transacción
+        START TRANSACTION;
+        
+        -- 1. Eliminar registros en listaalergias
+        DELETE FROM listaalergias WHERE idpersona = v_idpersona;
+        
+        -- 2. Eliminar registros de resultados relacionados con servicios requeridos de consultas del paciente
+        DELETE r FROM resultados r
+        INNER JOIN serviciosrequeridos sr ON r.idserviciorequerido = sr.idserviciorequerido
+        INNER JOIN consultas c ON sr.idconsulta = c.idconsulta
+        WHERE c.idpaciente = p_idpaciente;
+        
+        -- 3. Eliminar servicios requeridos de consultas del paciente
+        DELETE sr FROM serviciosrequeridos sr
+        INNER JOIN consultas c ON sr.idconsulta = c.idconsulta
+        WHERE c.idpaciente = p_idpaciente;
+        
+        -- 4. Eliminar detalleventas relacionados con las consultas del paciente
+        DELETE dv FROM detalleventas dv
+        INNER JOIN consultas c ON dv.idconsulta = c.idconsulta
+        WHERE c.idpaciente = p_idpaciente;
+        
+        -- 5. Eliminar triajes relacionados con consultas del paciente
+        DELETE t FROM triajes t
+        INNER JOIN consultas c ON t.idconsulta = c.idconsulta
+        WHERE c.idpaciente = p_idpaciente;
+        
+        -- 6. Eliminar recetas y tratamientos relacionados
+        DELETE t FROM tratamiento t
+        INNER JOIN recetas r ON t.idreceta = r.idreceta
+        INNER JOIN consultas c ON r.idconsulta = c.idconsulta
+        WHERE c.idpaciente = p_idpaciente;
+        
+        DELETE r FROM recetas r
+        INNER JOIN consultas c ON r.idconsulta = c.idconsulta
+        WHERE c.idpaciente = p_idpaciente;
+        
+        -- 7. Eliminar las consultas del paciente
+        DELETE FROM consultas WHERE idpaciente = p_idpaciente;
+        
+        -- 8. Eliminar las citas asociadas a la persona
+        DELETE FROM citas WHERE idpersona = v_idpersona;
+        
+        -- 9. Eliminar el registro de paciente
+        DELETE FROM pacientes WHERE idpaciente = p_idpaciente;
+        
+        -- 10. Verificar si la persona está asociada a un cliente
+        -- (no eliminar directamente la persona porque podría ser un cliente también)
+        DELETE FROM clientes WHERE idpersona = v_idpersona;
+        
+        -- 11. Finalmente eliminar la persona si no hay más referencias
+        DELETE FROM personas WHERE idpersona = v_idpersona;
+        
+        -- Confirmar la transacción
+        COMMIT;
+        
+        SELECT 1 AS resultado, 'Paciente eliminado correctamente con todos sus registros asociados' AS mensaje;
+    END IF;
+END //
+DELIMITER ;
+
+-- ----------------------alter
+
+
+SELECT 
+    TABLE_NAME,
+    COLUMN_NAME,
+    CONSTRAINT_NAME, 
+    REFERENCED_TABLE_NAME,
+    REFERENCED_COLUMN_NAME
+FROM
+    INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+WHERE
+    REFERENCED_TABLE_SCHEMA = 'clinicaDB' AND
+    (REFERENCED_TABLE_NAME = 'pacientes' OR REFERENCED_TABLE_NAME = 'personas')
 
 -- SELECT para ver las alergias de un paciente por su número de documento
 SELECT 

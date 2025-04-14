@@ -801,7 +801,7 @@ require_once '../../include/header.administrador.php';
                 });
             }
 
-            // Función para eliminar paciente - AQUÍ ESTÁ EL PROBLEMA QUE DEBES CORREGIR
+            // Función para eliminar paciente - CORRECCIÓN
             function eliminarPaciente(idPaciente) {
                 // Mostrar loading
                 Swal.fire({
@@ -814,7 +814,10 @@ require_once '../../include/header.administrador.php';
                     }
                 });
 
-                // Enviar solicitud usando POST
+                // 1. Imprimir el ID que estamos intentando eliminar (para depuración)
+                console.log("Intentando eliminar paciente ID:", idPaciente);
+
+                // Enviar solicitud usando POST con mejor manejo de errores
                 $.ajax({
                     url: '../../../controllers/paciente.controller.php',
                     type: 'POST',
@@ -824,10 +827,13 @@ require_once '../../include/header.administrador.php';
                     },
                     dataType: 'json',
                     success: function(response) {
+                        // 2. Imprimir la respuesta completa para depuración
+                        console.log("Respuesta recibida:", response);
+
                         Swal.close();
 
-                        // CORRECCIÓN AQUÍ: Verificar el campo 'status' en lugar de 'resultado'
-                        if (response.status) {
+                        // 3. Verificación más robusta de la respuesta
+                        if (response && response.status === true) {
                             // Mostrar mensaje de éxito
                             Swal.fire({
                                 icon: 'success',
@@ -839,52 +845,28 @@ require_once '../../include/header.administrador.php';
                                 cargarPacientes();
                             });
                         } else {
+                            // Mostrar el mensaje de error específico
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error',
-                                text: response.mensaje || 'No se pudo eliminar el paciente.',
+                                text: (response && response.mensaje) ? response.mensaje : 'No se pudo eliminar el paciente.',
                                 confirmButtonColor: '#3085d6'
                             });
                         }
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
+                        // 4. Registrar más información sobre el error
+                        console.error("Error AJAX:", status, error);
+                        console.error("Respuesta:", xhr.responseText);
+
                         Swal.close();
 
-                        // Intentar con GET como método alternativo
-                        $.ajax({
-                            url: `../../../controllers/paciente.controller.php?operacion=eliminar&idpaciente=${idPaciente}`,
-                            type: 'GET',
-                            dataType: 'json',
-                            success: function(response) {
-                                // CORRECCIÓN AQUÍ: Verificar el campo 'status' en lugar de 'resultado' 
-                                if (response.status) {
-                                    // Mostrar mensaje de éxito
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Eliminado',
-                                        text: response.mensaje || 'Paciente eliminado correctamente',
-                                        confirmButtonColor: '#3085d6'
-                                    }).then(() => {
-                                        // Recargar la tabla
-                                        cargarPacientes();
-                                    });
-                                } else {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error',
-                                        text: response.mensaje || 'No se pudo eliminar el paciente.',
-                                        confirmButtonColor: '#3085d6'
-                                    });
-                                }
-                            },
-                            error: function() {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error',
-                                    text: 'No se pudo eliminar el paciente. Por favor, inténtelo de nuevo.',
-                                    confirmButtonColor: '#3085d6'
-                                });
-                            }
+                        // Mostrar el mensaje de error HTTP
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Conexión',
+                            text: 'Error al comunicarse con el servidor: ' + error,
+                            confirmButtonColor: '#3085d6'
                         });
                     }
                 });

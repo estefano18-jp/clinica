@@ -9,6 +9,10 @@ $conn = $conexion->getConexion();
 // Variable para almacenar el ID de la imagen seleccionada
 $selectedImageId = null;
 $selectedImageDescripcion = '';
+$selectedImageTitulo = '';
+$selectedImageTexto = '';
+$selectedImageBotonTexto = '';
+$selectedImageBotonEnlace = '';
 $errorMessage = null;
 $successMessage = null;
 
@@ -67,6 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verificar si es una actualización o inserción
     $isUpdate = isset($_POST['imagenId']) && !empty($_POST['imagenId']);
     $descripcion = isset($_POST['descripcion']) ? $_POST['descripcion'] : '';
+    $titulo = isset($_POST['titulo']) ? $_POST['titulo'] : '';
+    $texto = isset($_POST['texto']) ? $_POST['texto'] : '';
+    $botonTexto = isset($_POST['boton_texto']) ? $_POST['boton_texto'] : '';
+    $botonEnlace = isset($_POST['boton_enlace']) ? $_POST['boton_enlace'] : '';
     
     // Procesar la imagen si se ha seleccionado
     $hasNewImage = isset($_FILES['imagenCarrusel']) && $_FILES['imagenCarrusel']['error'] == 0;
@@ -97,24 +105,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         // Reemplazar el archivo físico
                         if (move_uploaded_file($fileTmpName, $uploadFile)) {
-                            // Actualizamos la descripción en la base de datos
-                            $stmt = $conn->prepare("UPDATE carrusel SET descripcion = ? WHERE id = ?");
-                            $stmt->execute([$descripcion, $idImagen]);
+                            // Actualizamos los datos en la base de datos
+                            $stmt = $conn->prepare("UPDATE carrusel SET descripcion = ?, titulo = ?, texto = ?, boton_texto = ?, boton_enlace = ? WHERE id = ?");
+                            $stmt->execute([$descripcion, $titulo, $texto, $botonTexto, $botonEnlace, $idImagen]);
                             
-                            $successMessage = "Imagen actualizada correctamente manteniendo el nombre '{$imagenActual}'.";
+                            $successMessage = "Imagen y datos actualizados correctamente.";
                         } else {
                             $errorMessage = "Error al reemplazar la imagen. Verifica los permisos de escritura.";
                         }
                     }
                 } else {
-                    // Sin nueva imagen: actualizar solo descripción
-                    $stmt = $conn->prepare("UPDATE carrusel SET descripcion = ? WHERE id = ?");
-                    $stmt->execute([$descripcion, $idImagen]);
+                    // Sin nueva imagen: actualizar solo textos
+                    $stmt = $conn->prepare("UPDATE carrusel SET descripcion = ?, titulo = ?, texto = ?, boton_texto = ?, boton_enlace = ? WHERE id = ?");
+                    $stmt->execute([$descripcion, $titulo, $texto, $botonTexto, $botonEnlace, $idImagen]);
                     
                     if ($stmt->rowCount() > 0) {
-                        $successMessage = "Descripción actualizada correctamente.";
+                        $successMessage = "Información actualizada correctamente.";
                     } else {
-                        $errorMessage = "No se pudo actualizar la descripción o no se realizaron cambios.";
+                        $errorMessage = "No se pudo actualizar la información o no se realizaron cambios.";
                     }
                 }
             } else {
@@ -144,11 +152,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         if (move_uploaded_file($fileTmpName, $uploadFile)) {
                             // Guardamos el nombre predefinido en la base de datos
-                            $stmt = $conn->prepare("INSERT INTO carrusel (imagen, descripcion) VALUES (?, ?)");
-                            $stmt->execute([$nombreImagen, $descripcion]);
+                            $stmt = $conn->prepare("INSERT INTO carrusel (imagen, descripcion, titulo, texto, boton_texto, boton_enlace) VALUES (?, ?, ?, ?, ?, ?)");
+                            $stmt->execute([$nombreImagen, $descripcion, $titulo, $texto, $botonTexto, $botonEnlace]);
                             
                             if ($stmt->rowCount() > 0) {
-                                $successMessage = "Imagen subida correctamente como $nombreImagen y registrada en la base de datos.";
+                                $successMessage = "Imagen subida correctamente.";
                             } else {
                                 $errorMessage = "No se pudo registrar la imagen en la base de datos.";
                             }
@@ -186,6 +194,10 @@ if (isset($_GET['id'])) {
         $selectedImage = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($selectedImage) {
             $selectedImageDescripcion = $selectedImage['descripcion'];
+            $selectedImageTitulo = $selectedImage['titulo'];
+            $selectedImageTexto = $selectedImage['texto'];
+            $selectedImageBotonTexto = $selectedImage['boton_texto'];
+            $selectedImageBotonEnlace = $selectedImage['boton_enlace'];
         } else {
             $errorMessage = "No se encontró la imagen seleccionada.";
         }
@@ -216,11 +228,16 @@ $cacheBuster = time();
     <title>Gestionar Banner de Carrusel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .avatar-container {
             position: relative;
             margin-bottom: 15px;
             display: inline-block;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
         }
         .avatar-container img {
             width: 100%;
@@ -228,6 +245,10 @@ $cacheBuster = time();
             height: auto;
             border-radius: 8px;
             border: 2px solid #ddd;
+            transition: all 0.3s ease;
+        }
+        .avatar-container:hover img {
+            transform: scale(1.02);
         }
         .edit-icon {
             position: absolute;
@@ -241,10 +262,94 @@ $cacheBuster = time();
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .edit-icon:hover {
+            background-color: rgba(0,0,0,0.8);
+            transform: scale(1.1);
         }
         .selected-image {
             border: 3px solid #198754 !important;
-            box-shadow: 0 0 10px rgba(25, 135, 84, 0.5);
+            box-shadow: 0 0 15px rgba(25, 135, 84, 0.5) !important;
+        }
+        .carousel-card {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        .carousel-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .carousel-card .card-body {
+            padding: 1.5rem;
+        }
+        .carousel-card img {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+        .info-table {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        .info-table td {
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .info-table td:first-child {
+            font-weight: bold;
+            width: 30%;
+        }
+        .btn-edit {
+            background-color: #f0ad4e;
+            border-color: #f0ad4e;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-edit:hover {
+            background-color: #ec971f;
+            border-color: #ec971f;
+            color: white;
+            transform: scale(1.05);
+        }
+        .section-title {
+            position: relative;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background-color: #0d6efd;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        }
+        .custom-file-button {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .custom-file-button:hover {
+            transform: translateY(-2px);
+        }
+        .submit-btn {
+            transition: all 0.3s ease;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
     </style>
 </head>
@@ -256,20 +361,21 @@ $cacheBuster = time();
 
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="../index.php">Dashboard</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Gestionar Banner de Carrusel</li>
                 </ol>
             </nav>
 
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center border-bottom">
+                    <h5 class="mb-0 section-title">
                         <?php if ($selectedImageId): ?>
-                            <i class="fas fa-edit me-2"></i> Reemplazar Imagen del Carrusel
+                            <i class="fas fa-edit me-2 text-warning"></i> Reemplazar Imagen del Carrusel
                         <?php else: ?>
                             <?php if ($totalImagenes >= 3): ?>
-                                <i class="fas fa-exclamation-triangle me-2"></i> Límite de imágenes alcanzado
+                                <i class="fas fa-exclamation-triangle me-2 text-warning"></i> Límite de imágenes alcanzado
                             <?php else: ?>
-                                <i class="fas fa-image me-2"></i> Subir Nueva Imagen del Carrusel
+                                <i class="fas fa-image me-2 text-primary"></i> Subir Nueva Imagen del Carrusel
                             <?php endif; ?>
                         <?php endif; ?>
                     </h5>
@@ -281,7 +387,7 @@ $cacheBuster = time();
                 </div>
                 <div class="card-body">
                     <?php if ($totalImagenes >= 3 && !$selectedImageId): ?>
-                        <div class="alert alert-warning">
+                        <div class="alert alert-warning border-0 shadow-sm">
                             <i class="fas fa-exclamation-circle me-2"></i> Ya existen 3 imágenes en el carrusel. Para agregar una nueva, primero debe reemplazar una existente.
                         </div>
                     <?php else: ?>
@@ -291,27 +397,59 @@ $cacheBuster = time();
                                 <div class="col-md-3 text-center">
                                     <div class="avatar-container">
                                         <?php if ($selectedImageId && isset($selectedImage)): ?>
-                                            <img id="avatarPreview" src="../../img/carrusel/<?php echo htmlspecialchars($selectedImage['imagen']); ?>?v=<?php echo $cacheBuster; ?>" alt="Imagen de Carrusel" onerror="this.src='/api/placeholder/300/200'">
+                                            <img id="avatarPreview" src="../../img/carrusel/<?php echo htmlspecialchars($selectedImage['imagen']); ?>?v=<?php echo $cacheBuster; ?>" alt="Imagen de Carrusel" onerror="this.src='https://via.placeholder.com/300x200?text=Sin+Imagen'">
                                         <?php else: ?>
-                                            <img id="avatarPreview" src="../../img/carrusel/placeholder.jpg" alt="Imagen de Carrusel" onerror="this.src='/api/placeholder/300/200'">
+                                            <img id="avatarPreview" src="../../img/carrusel/placeholder.jpg" alt="Imagen de Carrusel" onerror="this.src='https://via.placeholder.com/300x200?text=Vista+Previa'">
                                         <?php endif; ?>
                                         <div class="edit-icon">
                                             <i class="fas fa-camera"></i>
                                         </div>
                                     </div>
-                                    <div class="file-input-container">
-                                        <button type="button" class="btn btn-outline-primary w-100" onclick="document.getElementById('imagenCarrusel').click()">
+                                    <div class="file-input-container mt-3">
+                                        <button type="button" class="btn btn-outline-primary w-100 custom-file-button" onclick="document.getElementById('imagenCarrusel').click()">
                                             <i class="fas fa-upload me-2"></i> Seleccionar imagen
                                         </button>
                                         <input type="file" id="imagenCarrusel" name="imagenCarrusel" accept="image/*" onchange="previewImage(event)" style="display: none;">
                                     </div>
+                                    <div class="mt-2 text-muted small">
+                                        <p>Formatos permitidos: JPG, PNG, GIF</p>
+                                        <p>Dimensiones recomendadas: 1200 x 600 px</p>
+                                    </div>
                                 </div>
                                 <div class="col-md-9">
                                     <div class="mb-3">
-                                        <label for="descripcion" class="form-label">Descripción</label>
-                                        <textarea class="form-control" id="descripcion" name="descripcion" rows="4"><?php echo htmlspecialchars($selectedImageDescripcion); ?></textarea>
+                                        <label for="descripcion" class="form-label">Descripción administrativa (opcional)</label>
+                                        <textarea class="form-control" id="descripcion" name="descripcion" rows="2" placeholder="Esta descripción es solo para referencia y no aparecerá en la web"><?php echo htmlspecialchars($selectedImageDescripcion); ?></textarea>
+                                        <small class="text-muted">Esta descripción es solo para referencia administrativa y no se muestra en la web.</small>
                                     </div>
-                                    <button type="submit" class="btn btn-primary w-100">
+                                    
+                                    <div class="mb-3">
+                                        <label for="titulo" class="form-label">Título (se muestra en el carrusel)</label>
+                                        <input type="text" class="form-control" id="titulo" name="titulo" value="<?php echo htmlspecialchars($selectedImageTitulo); ?>" placeholder="Ej: Atención médica de primera calidad" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="texto" class="form-label">Texto descriptivo</label>
+                                        <textarea class="form-control" id="texto" name="texto" rows="2" placeholder="Breve descripción que aparecerá bajo el título" required><?php echo htmlspecialchars($selectedImageTexto); ?></textarea>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="boton_texto" class="form-label">Texto del botón</label>
+                                                <input type="text" class="form-control" id="boton_texto" name="boton_texto" value="<?php echo htmlspecialchars($selectedImageBotonTexto); ?>" placeholder="Ej: Ver servicios" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="boton_enlace" class="form-label">Enlace del botón</label>
+                                                <input type="text" class="form-control" id="boton_enlace" name="boton_enlace" value="<?php echo htmlspecialchars($selectedImageBotonEnlace); ?>" placeholder="Ej: #servicios" required>
+                                                <small class="text-muted">Por ejemplo: #servicios, #tecnologia, #equipo</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary w-100 submit-btn">
                                         <?php if ($selectedImageId): ?>
                                             <i class="fas fa-save me-2"></i> Guardar Cambios
                                         <?php else: ?>
@@ -322,39 +460,59 @@ $cacheBuster = time();
                             </div>
                         </form>
                     <?php endif; ?>
-
-                    <?php if ($errorMessage): ?>
-                        <div class="alert alert-danger mt-3"><?php echo $errorMessage; ?></div>
-                    <?php endif; ?>
-                    <?php if ($successMessage): ?>
-                        <div class="alert alert-success mt-3"><?php echo $successMessage; ?></div>
-                    <?php endif; ?>
                 </div>
             </div>
 
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-images me-2"></i> Imágenes del Carrusel</h5>
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0 section-title"><i class="fas fa-images me-2 text-primary"></i> Imágenes del Carrusel</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <?php if (count($imagenes) > 0): ?>
                             <?php foreach ($imagenes as $row): ?>
-                                <div class="col-md-4 text-center mb-4">
-                                    <div class="card <?php echo ($selectedImageId == $row['id']) ? 'selected-image' : ''; ?>">
+                                <div class="col-md-4 mb-4">
+                                    <div class="carousel-card card <?php echo ($selectedImageId == $row['id']) ? 'selected-image' : ''; ?>">
+                                        <div class="position-relative">
+                                            <img src="../../img/carrusel/<?php echo htmlspecialchars($row['imagen']); ?>?v=<?php echo $cacheBuster; ?>" class="card-img-top" alt="Imagen carrusel" onerror="this.src='https://via.placeholder.com/300x200?text=Sin+Imagen'">
+                                            <div class="position-absolute top-0 end-0 p-2">
+                                                <span class="badge bg-primary"><?php echo htmlspecialchars($row['imagen']); ?></span>
+                                            </div>
+                                        </div>
                                         <div class="card-body">
-                                            <img src="../../img/carrusel/<?php echo htmlspecialchars($row['imagen']); ?>?v=<?php echo $cacheBuster; ?>" class="img-fluid rounded mb-2" alt="Imagen carrusel" onerror="this.src='/api/placeholder/300/200'">
-                                            <p class="mt-2"><strong>Nombre:</strong> <?php echo htmlspecialchars($row['imagen']); ?></p>
-                                            <p><strong>Descripción:</strong> <?php echo htmlspecialchars($row['descripcion']); ?></p>
-                                            <a href="<?php echo $_SERVER['PHP_SELF']; ?>?id=<?php echo $row['id']; ?>" class="btn btn-warning mt-2">
-                                                <i class="fas fa-edit"></i> Reemplazar
+                                            <h5 class="card-title text-primary"><?php echo htmlspecialchars($row['titulo']); ?></h5>
+                                            <p class="card-text"><?php echo htmlspecialchars($row['texto']); ?></p>
+                                            
+                                            <table class="info-table">
+                                                <tr>
+                                                    <td>Botón:</td>
+                                                    <td><span class="badge bg-light text-dark"><?php echo htmlspecialchars($row['boton_texto']); ?></span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Enlace:</td>
+                                                    <td><code><?php echo htmlspecialchars($row['boton_enlace']); ?></code></td>
+                                                </tr>
+                                                <?php if (!empty($row['descripcion'])): ?>
+                                                <tr>
+                                                    <td>Descripción:</td>
+                                                    <td><?php echo htmlspecialchars($row['descripcion']); ?></td>
+                                                </tr>
+                                                <?php endif; ?>
+                                            </table>
+                                            
+                                            <a href="<?php echo $_SERVER['PHP_SELF']; ?>?id=<?php echo $row['id']; ?>" class="btn btn-edit w-100 mt-3">
+                                                <i class="fas fa-edit"></i> Editar
                                             </a>
                                         </div>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <p class="text-center">No hay imágenes en el carrusel.</p>
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i> No hay imágenes en el carrusel. Utilice el formulario superior para agregar una nueva imagen.
+                                </div>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -363,6 +521,10 @@ $cacheBuster = time();
         </div>
     </div>
 </div>
+
+<!-- Script para SweetAlert -->
+<script src="../../js/alertas.js"></script>
+
 <script>
     function previewImage(event) {
         if (event.target.files && event.target.files[0]) {
@@ -373,6 +535,17 @@ $cacheBuster = time();
             reader.readAsDataURL(event.target.files[0]);
         }
     }
+
+    // Mostrar alertas usando SweetAlert si hay mensajes
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php if ($errorMessage): ?>
+            AlertaSweetAlert('error', 'Error', '<?php echo addslashes($errorMessage); ?>', '');
+        <?php endif; ?>
+        
+        <?php if ($successMessage): ?>
+            AlertaSweetAlert('success', 'Correcto', '<?php echo addslashes($successMessage); ?>', '');
+        <?php endif; ?>
+    });
 </script>
 
 </body>

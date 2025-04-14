@@ -17,47 +17,51 @@ $baseURL = '/sistemaclinica/';
     rel="stylesheet"
     integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
     crossorigin="anonymous" />
-  <!-- Volt CSS -->
-  <link type="text/css" href="<?php echo $baseURL; ?>css/dashboard/volt.css" rel="stylesheet" />
-  <!-- Favicon -->
-  <link rel="shortcut icon" href="<?php echo $baseURL; ?>img/favicon.ico" type="image/x-icon">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <!-- Estilos propios -->
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Poppins', sans-serif;
+    }
+    .error-container {
+      max-width: 800px;
+    }
+    .error-code {
+      font-size: 120px;
+      font-weight: 700;
+      color: #0d6efd;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    }
+    .error-divider {
+      width: 60px;
+      height: 4px;
+      background-color: #0d6efd;
+      margin: 1.5rem auto;
+    }
+  </style>
 </head>
 <body>
   <section class="vh-100 d-flex align-items-center justify-content-center">
-    <div class="container">
-      <div class="row">
-        <div class="col-12 text-center d-flex align-items-center justify-content-center">
-          <div class="mt-2">
-            <img
-              class="img-fluid w-75 p-3"
-              src="<?php echo $baseURL; ?>img/404/404.jpg"
-              alt="404 not found" />
-            <h1 class="mt-5">
-              Página no <span class="fw-bolder text-primary">encontrada</span>
-            </h1>
-            <p class="lead my-4">
-              Lo sentimos, la página que estás buscando no existe o ha sido movida.
-            </p>
-            <a
-              href="<?php echo $baseURL; ?>index.php"
-              class="btn btn-gray-800 d-inline-flex align-items-center justify-content-center mb-4">
-              <svg
-                class="icon icon-xs me-2"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg">
-                <path
-                  fill-rule="evenodd"
-                  d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z"
-                  clip-rule="evenodd"></path>
-              </svg>
-              Volver al inicio
+    <div class="container error-container">
+      <div class="row justify-content-center">
+        <div class="col-12 text-center">
+          <div class="error-code mb-3">404</div>
+          <div class="error-divider"></div>
+          <h1 class="mt-4 h2">
+            Página no <span class="fw-bolder text-primary">encontrada</span>
+          </h1>
+          <p class="lead my-4">
+            Lo sentimos, la página que estás buscando no existe o ha sido movida.
+          </p>
+          <div class="mt-5">
+            <a href="<?php echo $baseURL; ?>index.php" class="btn btn-primary btn-lg d-inline-flex align-items-center me-3 mb-3">
+              <i class="fas fa-home me-2"></i> Volver al inicio
             </a>
             <?php if(isset($_SERVER['HTTP_REFERER'])): ?>
-              <a
-                href="<?php echo htmlspecialchars($_SERVER['HTTP_REFERER']); ?>"
-                class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center mb-4 ms-2">
-                Regresar a la página anterior
+              <a href="<?php echo htmlspecialchars($_SERVER['HTTP_REFERER']); ?>" class="btn btn-outline-secondary btn-lg d-inline-flex align-items-center mb-3">
+                <i class="fas fa-arrow-left me-2"></i> Regresar a la página anterior
               </a>
             <?php endif; ?>
           </div>
@@ -66,11 +70,9 @@ $baseURL = '/sistemaclinica/';
     </div>
   </section>
 
-  <footer class="bg-white rounded shadow p-3 fixed-bottom">
-    <div class="row">
-      <div class="col-12 text-center">
-        <p class="mb-0">© <?php echo date('Y'); ?> Sistema Clínica. Todos los derechos reservados.</p>
-      </div>
+  <footer class="bg-white shadow-sm p-3 text-center fixed-bottom">
+    <div class="container">
+      <p class="mb-0">© <?php echo date('Y'); ?> Sistema Clínica. Todos los derechos reservados.</p>
     </div>
   </footer>
 
