@@ -1,44 +1,3 @@
-<?php
-// Incluir archivo de conexión
-require_once 'models/Conexion.php';
-
-// Creación de conexión
-$conexion = new Conexion();
-$conn = $conexion->getConexion();
-
-// Obtener las imágenes del carrusel
-try {
-    $stmt = $conn->prepare("SELECT * FROM carrusel ORDER BY id ASC LIMIT 3");
-    $stmt->execute();
-    $carruselItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    error_log("Error al obtener imágenes del carrusel: " . $e->getMessage());
-    $carruselItems = [];
-}
-
-// Obtener promociones visibles inicialmente (primeras 2)
-try {
-    $stmt = $conn->prepare("SELECT * FROM promociones WHERE estado = 1 ORDER BY id DESC LIMIT 2");
-    $stmt->execute();
-    $promocionesIniciales = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    error_log("Error al obtener promociones iniciales: " . $e->getMessage());
-    $promocionesIniciales = [];
-}
-
-// Obtener todas las demás promociones (a partir de la 3ra)
-try {
-    $stmt = $conn->prepare("SELECT * FROM promociones WHERE estado = 1 ORDER BY id DESC LIMIT 100 OFFSET 2");
-    $stmt->execute();
-    $promocionesAdicionales = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    error_log("Error al obtener promociones adicionales: " . $e->getMessage());
-    $promocionesAdicionales = [];
-}
-
-// Generar un código único para prevenir el cache de imágenes
-$cacheBuster = time();
-?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -201,30 +160,38 @@ $cacheBuster = time();
   <!-- Carrusel -->
   <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
     <div class="carousel-indicators">
-      <?php foreach ($carruselItems as $key => $item): ?>
-        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="<?php echo $key; ?>" 
-                class="<?php echo ($key == 0) ? 'active' : ''; ?>" 
-                aria-current="<?php echo ($key == 0) ? 'true' : 'false'; ?>" 
-                aria-label="Slide <?php echo $key + 1; ?>"></button>
-      <?php endforeach; ?>
+      <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" class="active" 
+              aria-current="true" aria-label="Slide 1"></button>
+      <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1" 
+              aria-current="false" aria-label="Slide 2"></button>
+      <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2" 
+              aria-current="false" aria-label="Slide 3"></button>
     </div>
     <div class="carousel-inner">
-      <?php foreach ($carruselItems as $key => $item): ?>
-        <div class="carousel-item <?php echo ($key == 0) ? 'active' : ''; ?>">
-          <img src="img/carrusel/<?php echo htmlspecialchars($item['imagen']); ?>?v=<?php echo $cacheBuster; ?>" 
-               class="d-block w-100 carousel-image" 
-               data-src="img/carrusel/<?php echo htmlspecialchars($item['imagen']); ?>" 
-               alt="<?php echo htmlspecialchars($item['descripcion']); ?>">
-          <div class="carousel-caption">
-            <h3 class="animate__animated animate__fadeInDown"><?php echo htmlspecialchars($item['titulo']); ?></h3>
-            <p class="animate__animated animate__fadeInUp"><?php echo htmlspecialchars($item['texto']); ?></p>
-            <a href="<?php echo htmlspecialchars($item['boton_enlace']); ?>" 
-               class="btn btn-primary animate__animated animate__fadeInUp">
-              <?php echo htmlspecialchars($item['boton_texto']); ?>
-            </a>
-          </div>
+      <div class="carousel-item active">
+        <img src="img/carrusel/imagenCarousel01.jpg" class="d-block w-100 carousel-image" alt="Cuidado médico de calidad">
+        <div class="carousel-caption">
+          <h3 class="animate__animated animate__fadeInDown">Cuidado Médico de Calidad</h3>
+          <p class="animate__animated animate__fadeInUp">Ofrecemos servicios médicos de la más alta calidad para toda la familia</p>
+          <a href="#especialidades" class="btn btn-primary animate__animated animate__fadeInUp">Conocer Más</a>
         </div>
-      <?php endforeach; ?>
+      </div>
+      <div class="carousel-item">
+        <img src="img/carrusel/imagenCarousel02.jpg" class="d-block w-100 carousel-image" alt="Profesionales certificados">
+        <div class="carousel-caption">
+          <h3 class="animate__animated animate__fadeInDown">Profesionales Certificados</h3>
+          <p class="animate__animated animate__fadeInUp">Nuestro equipo médico está formado por los mejores especialistas</p>
+          <a href="#especialidades" class="btn btn-primary animate__animated animate__fadeInUp">Ver Especialidades</a>
+        </div>
+      </div>
+      <div class="carousel-item">
+        <img src="img/carrusel/imagenCarousel03.jpg" class="d-block w-100 carousel-image" alt="Tecnología avanzada">
+        <div class="carousel-caption">
+          <h3 class="animate__animated animate__fadeInDown">Tecnología Avanzada</h3>
+          <p class="animate__animated animate__fadeInUp">Contamos con equipos de última generación para diagnósticos precisos</p>
+          <a href="#promociones" class="btn btn-primary animate__animated animate__fadeInUp">Ver Promociones</a>
+        </div>
+      </div>
     </div>
     <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators"
       data-bs-slide="prev">
@@ -303,7 +270,7 @@ $cacheBuster = time();
 
       <div class="row mt-4">
         <div class="col-md-12 text-center">
-          <a href="especialidades.php" class="btn btn-primary">Ver todas las especialidades</a>
+          <a href="especialidades.html" class="btn btn-primary">Ver todas las especialidades</a>
         </div>
       </div>
     </div>
@@ -324,77 +291,113 @@ $cacheBuster = time();
 
       <!-- Promociones iniciales -->
       <div class="row">
-        <?php if (count($promocionesIniciales) > 0): ?>
-          <?php foreach ($promocionesIniciales as $promo): ?>
-            <div class="col-lg-6 col-md-6 mb-4">
-              <div class="card promotion-item border-0 rounded shadow-sm h-100">
-                <div class="position-relative">
-                  <img src="img/promociones/<?php echo htmlspecialchars($promo['imagen']); ?>?v=<?php echo $cacheBuster; ?>" 
-                       class="card-img-top" alt="<?php echo htmlspecialchars($promo['titulo']); ?>">
-                  <div class="promo-badge position-absolute top-0 end-0 m-3 px-3 py-2 bg-primary text-white rounded">
-                    <?php echo htmlspecialchars($promo['porcentaje_descuento']); ?>% DESCUENTO
-                  </div>
-                </div>
-                <div class="card-body">
-                  <h4 class="card-title text-primary"><?php echo htmlspecialchars($promo['titulo']); ?></h4>
-                  <p class="card-text"><?php echo htmlspecialchars($promo['descripcion']); ?></p>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <p class="mb-0 text-decoration-line-through text-muted">S/<?php echo number_format($promo['precio_regular'], 2); ?></p>
-                      <p class="text-primary fw-bold fs-4 mb-0">S/<?php echo number_format($promo['precio_oferta'], 2); ?></p>
-                    </div>
-                    <a href="<?php echo htmlspecialchars($promo['enlace_boton']); ?>" class="btn btn-outline-primary">
-                      <?php echo htmlspecialchars($promo['texto_boton']); ?>
-                    </a>
-                  </div>
-                </div>
+        <!-- Promoción 1 -->
+        <div class="col-lg-6 col-md-6 mb-4">
+          <div class="card promotion-item border-0 rounded shadow-sm h-100">
+            <div class="position-relative">
+              <img src="img/promociones/promocion-checkup.jpg" class="card-img-top" alt="Chequeo general">
+              <div class="promo-badge position-absolute top-0 end-0 m-3 px-3 py-2 bg-primary text-white rounded">
+                25% DESCUENTO
               </div>
             </div>
-          <?php endforeach; ?>
-        <?php else: ?>
-          <!-- Si no hay promociones iniciales -->
-          <div class="col-12 text-center mb-4">
-            <p>No hay promociones disponibles en este momento.</p>
+            <div class="card-body">
+              <h4 class="card-title text-primary">Chequeo Médico General</h4>
+              <p class="card-text">Evaluación completa de su salud que incluye exámenes de laboratorio, electrocardiograma y consulta médica.</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="mb-0 text-decoration-line-through text-muted">S/200.00</p>
+                  <p class="text-primary fw-bold fs-4 mb-0">S/150.00</p>
+                </div>
+                <a href="reservar-cita.html" class="btn btn-outline-primary">
+                  Reservar Cita
+                </a>
+              </div>
+            </div>
           </div>
-        <?php endif; ?>
+        </div>
+
+        <!-- Promoción 2 -->
+        <div class="col-lg-6 col-md-6 mb-4">
+          <div class="card promotion-item border-0 rounded shadow-sm h-100">
+            <div class="position-relative">
+              <img src="img/promociones/promocion-dental.jpg" class="card-img-top" alt="Limpieza dental">
+              <div class="promo-badge position-absolute top-0 end-0 m-3 px-3 py-2 bg-primary text-white rounded">
+                30% DESCUENTO
+              </div>
+            </div>
+            <div class="card-body">
+              <h4 class="card-title text-primary">Limpieza Dental Profesional</h4>
+              <p class="card-text">Eliminación completa de sarro y placa bacteriana, incluye fluorización y revisión general.</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="mb-0 text-decoration-line-through text-muted">S/150.00</p>
+                  <p class="text-primary fw-bold fs-4 mb-0">S/105.00</p>
+                </div>
+                <a href="reservar-cita.html" class="btn btn-outline-primary">
+                  Reservar Cita
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Promociones adicionales (inicialmente ocultas) -->
       <div id="promocionesAdicionales">
         <div class="row">
-          <?php if (count($promocionesAdicionales) > 0): ?>
-            <?php foreach ($promocionesAdicionales as $promo): ?>
-              <div class="col-lg-6 col-md-6 mb-4">
-                <div class="card promotion-item border-0 rounded shadow-sm h-100">
-                  <div class="position-relative">
-                    <img src="img/promociones/<?php echo htmlspecialchars($promo['imagen']); ?>?v=<?php echo $cacheBuster; ?>" 
-                         class="card-img-top" alt="<?php echo htmlspecialchars($promo['titulo']); ?>">
-                    <div class="promo-badge position-absolute top-0 end-0 m-3 px-3 py-2 bg-primary text-white rounded">
-                      <?php echo htmlspecialchars($promo['porcentaje_descuento']); ?>% DESCUENTO
-                    </div>
-                  </div>
-                  <div class="card-body">
-                    <h4 class="card-title text-primary"><?php echo htmlspecialchars($promo['titulo']); ?></h4>
-                    <p class="card-text"><?php echo htmlspecialchars($promo['descripcion']); ?></p>
-                    <div class="d-flex justify-content-between align-items-center">
-                      <div>
-                        <p class="mb-0 text-decoration-line-through text-muted">S/<?php echo number_format($promo['precio_regular'], 2); ?></p>
-                        <p class="text-primary fw-bold fs-4 mb-0">S/<?php echo number_format($promo['precio_oferta'], 2); ?></p>
-                      </div>
-                      <a href="<?php echo htmlspecialchars($promo['enlace_boton']); ?>" class="btn btn-outline-primary">
-                        <?php echo htmlspecialchars($promo['texto_boton']); ?>
-                      </a>
-                    </div>
-                  </div>
+          <!-- Promoción 3 -->
+          <div class="col-lg-6 col-md-6 mb-4">
+            <div class="card promotion-item border-0 rounded shadow-sm h-100">
+              <div class="position-relative">
+                <img src="/api/placeholder/600/300" class="card-img-top" alt="Consulta nutrición">
+                <div class="promo-badge position-absolute top-0 end-0 m-3 px-3 py-2 bg-primary text-white rounded">
+                  20% DESCUENTO
                 </div>
               </div>
-            <?php endforeach; ?>
-          <?php endif; ?>
+              <div class="card-body">
+                <h4 class="card-title text-primary">Consulta Nutricional</h4>
+                <p class="card-text">Evaluación del estado nutricional con plan alimenticio personalizado por nutricionista especializado.</p>
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <p class="mb-0 text-decoration-line-through text-muted">S/120.00</p>
+                    <p class="text-primary fw-bold fs-4 mb-0">S/96.00</p>
+                  </div>
+                  <a href="reservar-cita.html" class="btn btn-outline-primary">
+                    Reservar Cita
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Promoción 4 -->
+          <div class="col-lg-6 col-md-6 mb-4">
+            <div class="card promotion-item border-0 rounded shadow-sm h-100">
+              <div class="position-relative">
+                <img src="/api/placeholder/600/300" class="card-img-top" alt="Exámenes laboratorio">
+                <div class="promo-badge position-absolute top-0 end-0 m-3 px-3 py-2 bg-primary text-white rounded">
+                  15% DESCUENTO
+                </div>
+              </div>
+              <div class="card-body">
+                <h4 class="card-title text-primary">Paquete de Laboratorio</h4>
+                <p class="card-text">Incluye hemograma completo, perfil lipídico, glucosa, urea, creatinina y examen de orina.</p>
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <p class="mb-0 text-decoration-line-through text-muted">S/180.00</p>
+                    <p class="text-primary fw-bold fs-4 mb-0">S/153.00</p>
+                  </div>
+                  <a href="reservar-cita.html" class="btn btn-outline-primary">
+                    Reservar Ahora
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Botón para ver más promociones -->
-      <?php if (count($promocionesAdicionales) > 0): ?>
       <div class="row mt-4">
         <div class="col-md-12 text-center">
           <button id="btnVerMasPromociones" class="btn btn-primary btn-ver-mas">
@@ -402,7 +405,6 @@ $cacheBuster = time();
           </button>
         </div>
       </div>
-      <?php endif; ?>
     </div>
   </section>
 
@@ -414,20 +416,20 @@ $cacheBuster = time();
           <!-- Sobre la Clínica -->
           <div class="col-lg-4 col-md-6 footer-widget footer-about mb-4">
             <h3 class="widget-title border-bottom pb-2 mb-3">Sobre Nosotros</h3>
-            <img loading="lazy" class="footer-logo mb-3" src="img/iconoClinica.jpg" alt="Clínica"
+            <img loading="lazy" class="footer-logo mb-3" src="/api/placeholder/80/80" alt="Clínica"
               style="max-height: 80px; border-radius: 5px;">
             <p>Somos una clínica comprometida con su salud y bienestar. Contamos con los mejores especialistas médicos y
               la tecnología más avanzada para brindarle una atención personalizada y de calidad.</p>
             <div class="footer-social mt-3">
               <ul class="list-inline">
-                <li class="list-inline-item"><a href="https://facebook.com/clinica" class="btn btn-outline-light btn-sm"
+                <li class="list-inline-item"><a href="https://facebook.com/" class="btn btn-outline-light btn-sm"
                     aria-label="Facebook"><i class="fab fa-facebook-f"></i></a></li>
-                <li class="list-inline-item"><a href="https://twitter.com/clinica" class="btn btn-outline-light btn-sm"
+                <li class="list-inline-item"><a href="https://twitter.com/" class="btn btn-outline-light btn-sm"
                     aria-label="Twitter"><i class="fab fa-twitter"></i></a></li>
-                <li class="list-inline-item"><a href="https://instagram.com/clinica"
+                <li class="list-inline-item"><a href="https://instagram.com/"
                     class="btn btn-outline-light btn-sm" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
                 </li>
-                <li class="list-inline-item"><a href="https://youtube.com/clinica" class="btn btn-outline-light btn-sm"
+                <li class="list-inline-item"><a href="https://youtube.com/" class="btn btn-outline-light btn-sm"
                     aria-label="YouTube"><i class="fab fa-youtube"></i></a></li>
               </ul>
             </div>
@@ -476,9 +478,7 @@ $cacheBuster = time();
         <div class="row align-items-center">
           <div class="col-md-6 text-center text-md-start">
             <div class="copyright-info">
-              <span>&copy;
-                <script>document.write(new Date().getFullYear())</script> Clínica. Todos los derechos reservados.
-              </span>
+              <span>&copy; 2025 Clínica Médica. Todos los derechos reservados.</span>
             </div>
           </div>
 
@@ -502,50 +502,9 @@ $cacheBuster = time();
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
   
-  <!-- Script para actualizar automáticamente las imágenes del carrusel -->
+  <!-- Script para el botón de ver más promociones -->
   <script>
-    // Función para actualizar las imágenes con un nuevo parámetro de timestamp
-    function refreshCarouselImages() {
-      const carouselImages = document.querySelectorAll('.carousel-image');
-      const timestamp = new Date().getTime(); // Obtener un timestamp único
-      
-      carouselImages.forEach(function(img) {
-        const originalSrc = img.getAttribute('data-src');
-        if (originalSrc) {
-          img.src = originalSrc + '?v=' + timestamp;
-        }
-      });
-      
-      // También actualizar las animaciones del carrusel
-      const captions = document.querySelectorAll('.carousel-caption h3, .carousel-caption p, .carousel-caption a');
-      captions.forEach(function(element) {
-        // Reiniciar animaciones eliminando y volviendo a agregar las clases de animación
-        const animationClass = Array.from(element.classList).find(c => c.startsWith('animate__'));
-        if (animationClass) {
-          element.classList.remove(animationClass);
-          // Forzar un reflow
-          void element.offsetWidth;
-          // Agregar de nuevo la clase para reiniciar la animación
-          element.classList.add(animationClass);
-        }
-      });
-    }
-    
-    // Actualizar las imágenes del carrusel cada 30 segundos
-    setInterval(refreshCarouselImages, 30000);
-    
-    // También actualizar las imágenes al cargar la página
     document.addEventListener('DOMContentLoaded', function() {
-      refreshCarouselImages();
-      
-      // Actualizar también cuando se cambia de slide en el carrusel
-      const carousel = document.getElementById('carouselExampleIndicators');
-      if (carousel) {
-        carousel.addEventListener('slide.bs.carousel', function() {
-          refreshCarouselImages();
-        });
-      }
-      
       // Gestionar el botón "Ver Todas las Promociones"
       const btnVerMas = document.getElementById('btnVerMasPromociones');
       const promocionesAdicionales = document.getElementById('promocionesAdicionales');
